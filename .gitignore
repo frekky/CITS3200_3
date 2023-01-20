@@ -11,3 +11,4 @@ pgbackups/
 etc-letsencrypt/
 var-letsencrypt/
 well_known/
+misc/

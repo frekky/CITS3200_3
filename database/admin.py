@@ -75,9 +75,9 @@ def get_age_html(obj):
         res = None
     
     if res:
-        return format_html('<b>{}</b> ({})<br>{}', obj.Age_original, obj.Age_general, res)
+        return format_html('<b>{}</b> ({})<br>{}', obj.Age_specific, obj.Age_general, res)
     else:
-        return format_html('<b>{}</b> ({})', obj.Age_original, obj.Age_general)
+        return format_html('<b>{}</b> ({})', obj.Age_specific, obj.Age_general)
 
 class ResultsInline(admin.StackedInline):
     model = Results
@@ -107,29 +107,32 @@ class StudiesAdmin(ViewModelAdmin):
     inlines = [ResultsInline]
     readonly_fields = ('is_approved',)
     
-    list_display = ('Paper_title', 'get_info_html', 'get_location_html', 'get_population_html', 'get_age_html',
-        'get_case_html', 'Burden_measure', 'Notes', 'get_flags_html')
+    list_display = (
+        'Paper_title',
+        'get_info_html',
+        'get_location_html',
+        'get_age_html',
+        'get_case_html',
+        'get_flags_html'
+    )
+    
     list_filter = (
         ('Study_design', ChoiceDropdownFilter), 
-        ('Study_group',ChoiceDropdownFilter), 
-        ('Age_general', DropdownFilter), 
-        ('Age_min', NumericRangeFilter),
-        ('Age_max', NumericRangeFilter),
+        ('Study_group', ChoiceDropdownFilter), 
+        ('Disease', DropdownFilter),
         ('Coverage', DropdownFilter),
-        ('Jurisdiction', DropdownFilter),
         ('Surveillance_setting', DropdownFilter),
+        ('Clinical_definition_category', ChoiceDropdownFilter),
         ('Climate', DropdownFilter), 
         ('Aria_remote', DropdownFilter),
-        ('Population_denom', DropdownFilter),
-        ('Population_group_strata', DropdownFilter),
-        ('Disease', DropdownFilter),
-        ('Clinical_definition_category', ChoiceDropdownFilter),
-        ('Burden_measure', DropdownFilter),
-        
-         'Ses_reported', 'Mortality_data', 'Method_limitations')
+    )
+
     ordering = ('Paper_title', 'Study_group')
-    search_fields = ('Paper_title', 'Paper_link', 'Study_description', 'Data_source', 'Specific_region', 'Method_limitations', 'Other_points' )
+
+    search_fields = ('Paper_title', 'Paper_link', 'Study_description', 'Data_source_name', 'Specific_region', 'Method_limitations', 'Other_points')
+
     actions = [download_as_csv('Export selected Studies to CSV')]
+
     search_help_text = 'Search Titles, Study Descriptions, Data Source, Specific Geographic Location, Method Limitations, or Other Points for matching keywords. Put quotes around search terms to find exact phrases only.'
 
     download_as_csv_verbose_names = False
@@ -141,29 +144,18 @@ class StudiesAdmin(ViewModelAdmin):
         'Year',
         'Disease',
         'Study_design',
-        'Study_design_other',
         'Study_description',
-        'Case_definition',
-        'Case_findings',
-        'Surveillance_setting',
+        'Diagnosis_method',
         'Data_source',
+        'Surveillance_setting',
+        'Data_source_name',
         'Clinical_definition_category',
-        'Case_cap_meth_other',
         'Coverage',
-        'Jurisdiction',
-        'Specific_region',
         'Climate',
         'Aria_remote',
-        'Population_group_strata',
-        'Age_original', 'Age_general', 'Age_min', 'Age_max',
-        'Burden_measure',
-        'Ses_reported',
-        'Mortality_data',
         'Method_limitations',
         'Limitations_identified',
         'Other_points',
-        ('get_export_notes', 'Notes'),
-        'is_approved',
     ]
 
     def get_readonly_fields(self, request, obj=None):
@@ -180,25 +172,17 @@ class StudiesAdmin(ViewModelAdmin):
     def get_flags_html(self, obj):
         return render_to_string('database/row_flags.html', context={'row': obj})
     
-    @admin.display(description='Population')
-    def get_population_html(self, obj):
-        return format_html('<div><b>Group Strata: </b>{}</div><br><div><b>Denom: </b>{}</div>',
-            obj.Population_group_strata, obj.Population_denom
-        )
-    
     @admin.display(description='Geography', ordering='Specific_region')
     def get_location_html(self, obj):
-        return format_html('<div><b>Specific Region: </b>{}<br><b>Jurisdiction: </b>{}<br>'
-            '<b>Aria Remote: </b>{}<br><b>Climate: </b>{}<br><b>Coverage: </b>{}</div>',
-            obj.Specific_region, obj.Jurisdiction,
+        return format_html('<div><b>Aria Remote: </b>{}<br><b>Climate: </b>{}<br><b>Coverage: </b>{}</div>',
             obj.Aria_remote, obj.Climate, obj.Coverage
         )
 
-    @admin.display(description='Case Info', ordering='Case_definition')
+    @admin.display(description='Case Info', ordering='Diagnosis_method')
     def get_case_html(self, obj):
         return format_html('<div><b>Case Definition: </b>{}<br><b>Surveillance: </b>{}<br>'
             '<b>Case Findings: </b>{}<br><b>Data Source: </b>{}</div>',
-            obj.Case_definition, obj.Surveillance_setting, obj.Case_findings, obj.Data_source,
+            obj.Diagnosis_method, obj.Surveillance_setting, obj.Data_source, obj.Data_source_name,
         )
 
     @admin.display(ordering='Age_general', description='Age Bracket')
@@ -217,46 +201,64 @@ class StudiesAdmin(ViewModelAdmin):
 class ResultsAdmin(ViewModelAdmin):
     readonly_fields = ('is_approved',)
     
-    list_display = ('get_measure', 'get_study_group', 'get_observation_time', 'get_age_html',
-        'get_population_html', 'get_location_html', 'get_study', 'Notes', 'get_flags_html', )
+    list_display = (
+        'get_study',
+        'get_study_group',
+        'get_location_html',
+        'get_population_html',
+        'get_age_html',
+        'get_observation_time',
+        'get_flags_html',
+        'get_measure',
+    )
 
     list_filter = (
-        ('Study__Study_group',ChoiceDropdownFilter), 
+        ('Study__Study_group', ChoiceDropdownFilter), 
         ('Age_general', DropdownFilter),
-        ('Age_min', NumericRangeFilter),
-        ('Age_max', NumericRangeFilter),
-        ('Numerator', NumericRangeFilter),
-        ('Denominator', NumericRangeFilter),
-        ('Point_estimate', NumericRangeFilter),
         ('Population_gender', DropdownFilter), 
-        ('Jurisdiction', DropdownFilter),
         ('Indigenous_population', DropdownFilter),
-        'Indigenous_status',
-        'Interpolated_from_graph', 
-        'Age_standardisation',
-         'Dataset_name',
-        'Proportion', 'Mortality_flag', 'Recurrent_ARF_flag', 'GAS_attributable_fraction', 'Defined_ARF')
+        ('Country', DropdownFilter),
+        ('Jurisdiction', DropdownFilter),
+        ('Year_start', NumericRangeFilter),
+        ('Year_stop', NumericRangeFilter),
+        'Proportion',
+        'StrepA_attributable_fraction',
+    )
 
     download_as_csv_verbose_names = False
     download_as_csv_fields = [
         ('Study__get_export_id', 'Results_ID'),
         ('Study__Study_group', 'Result_group'),
-        'Age_general', 'Age_min', 'Age_max', 'Age_original',
-        'Population_gender', 'Indigenous_status', 'Indigenous_population',
-        'Country', 'Jurisdiction', 'Specific_location',
-        'Year_start', 'Year_stop', 'Observation_time_years',
-        'Numerator', 'Denominator', 'Point_estimate', 'Measure',
-        'Interpolated_from_graph', 'Age_standardisation', 'Dataset_name', 'Proportion',
-        'Mortality_flag', 'Recurrent_ARF_flag', 'GAS_attributable_fraction', 'Defined_ARF', 'Focus_of_study',
-        ('get_export_notes', 'Notes'),
+        'Age_general',
+        'Age_min',
+        'Age_max',
+        'Age_specific',
+        'Population_gender',
+        'Indigenous_status',
+        'Indigenous_population',
+        'Country',
+        'Jurisdiction',
+        'Specific_location',
+        'Year_start',
+        'Year_stop',
+        'Observation_time_years',
+        'Numerator',
+        'Denominator',
+        'Point_estimate',
+        'Measure',
+        'Interpolated_from_graph',
+        'Proportion',
+        'Mortality_flag',
+        'Recurrent_ARF_flag',
+        'StrepA_attributable_fraction',
         'is_approved'
     ]
 
     ordering = ('-Study__Study_group', )    
     actions = [download_as_csv('Export selected results to CSV')]
 
-    search_fields = ('Study__Paper_title', 'Measure', 'Specific_location', 'Focus_of_study', 'Notes')
-    search_help_text = 'Search Study Titles, Measure, Specific Geographic location, Focus of Study, or Other Notes for matching keywords. Put quotes around search terms to find exact phrases only.'
+    search_fields = ('Study__Paper_title', 'Measure', 'Specific_location')
+    search_help_text = 'Search Study Titles, Measure, and Specific Location for matching keywords. Put quotes around search terms to find exact phrases only.'
 
     @admin.display(ordering='Study__Paper_title', description='Study')
     def get_study(self, obj):
@@ -271,12 +273,13 @@ class ResultsAdmin(ViewModelAdmin):
         if obj.Study:
             return obj.Study.Study_group
         else:
-            return 'Study Unknown'
+            return 'Study Missing!'
 
-    @admin.display(description='Disease Burden')
+    @admin.display(description='Point Estimate')
     def get_measure(self, obj):
-        return format_html('<div><b>Numerator: </b>{}<br><b>Denominator: </b>{}<br><b>Point estimate: </b>{}<br><br>Measure: {}</div>',
-            obj.Numerator, obj.Denominator, obj.Point_estimate, obj.Measure
+        return format_html('<div><b>Point estimate: </b>{}<br><br>Measure: {}<br><br><b>Numerator: </b>{}<br><b>Denominator: </b>{}</div>',
+            obj.Point_estimate, obj.Measure,
+            obj.Numerator, obj.Denominator,
         )
 
     @admin.display(description='Population', ordering='Population_gender')
@@ -308,8 +311,6 @@ class ResultsAdmin(ViewModelAdmin):
     def get_age_html(self, obj):
         return get_age_html(obj)
 
-    # fvp: removed soem fields for demo: , 'Mortality_flag',	'Recurrent_ARF_flag','GAS_attributable_fraction', 'Defined_ARF', 'Focus_of_study', 
-    
     def get_readonly_fields(self, request, obj=None):
             is_superuser = request.user.is_superuser
             if is_superuser:

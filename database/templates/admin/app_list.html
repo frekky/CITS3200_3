@@ -9,12 +9,13 @@
         </caption>
         {% for model in app.models %}
           <tr class="model-{{ model.object_name|lower }}{% if model.admin_url in request.path|urlencode %} current-model{% endif %}">
+            <th scope="row" {% if not model.add_url %}colspan="2"{% endif %}>
             {% if model.admin_url %}
-              <th scope="row"><a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a></th>
+              <a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a>
             {% else %}
-              <th scope="row">{{ model.name }}</th>
+              {{ model.name }}
             {% endif %}
-
+            </th>
             {% if model.add_url %}
               <td style="text-align: right;">
                   <a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>
@@ -25,7 +26,6 @@
                   {% endif %}
               </td>
             {% else %}
-              <td></td>
             {% endif %}
 
             {% if model.admin_url and show_changelinks %}

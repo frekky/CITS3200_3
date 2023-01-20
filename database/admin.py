@@ -111,7 +111,6 @@ class StudiesAdmin(ViewModelAdmin):
         'Paper_title',
         'get_info_html',
         'get_location_html',
-        'get_age_html',
         'get_case_html',
         'get_flags_html'
     )

@@ -1,0 +1,29 @@
+<div class="rowdata">
+    <table>
+        <tbody>
+            <tr>
+                <td colspan="2">
+                    {{ row.Indigenous_population }}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    {{ row.Population_gender }}
+                </td>
+            </tr>
+            <tr>
+                <th>Ages</th>
+                <td>
+                    {{ row.Age_specific }}<br>
+                    <i>{{ row.exact_age_text }}</i>
+                </td>
+            </tr>
+            <tr>
+                <th>Obsv. Time</th>
+                <td>
+                    {{ row.Year_start }} to {{ row.Year_stop }} ({{ row.observation_time_text }})
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

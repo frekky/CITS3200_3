@@ -63,22 +63,6 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
             if not is_superuser:
                 return excluded
 
-def get_age_html(obj):
-    if obj.Age_min is not None and obj.Age_min > 0:
-        if obj.Age_max is not None and obj.Age_max < 999:
-            res = '%d to %d years old' % (obj.Age_min, obj.Age_max)
-        else:
-            res = '%d years and older' % obj.Age_min
-    elif obj.Age_max is not None and obj.Age_max < 999:
-        res = 'Up to %d years old' % obj.Age_max
-    else:
-        res = None
-    
-    if res:
-        return format_html('<b>{}</b> ({})<br>{}', obj.Age_specific, obj.Age_general, res)
-    else:
-        return format_html('<b>{}</b> ({})', obj.Age_specific, obj.Age_general)
-
 class ResultsInline(admin.StackedInline):
     model = Results
     extra = 0
@@ -165,11 +149,11 @@ class StudiesAdmin(ViewModelAdmin):
 
     @admin.display(ordering='Year', description='Study Info')
     def get_info_html(self, obj):
-        return render_to_string('database/studies_info.html', context={'row': obj})
+        return render_to_string('database/data/study_info.html', context={'row': obj})
 
     @admin.display(description='Flags')
     def get_flags_html(self, obj):
-        return render_to_string('database/row_flags.html', context={'row': obj})
+        return render_to_string('database/data/row_flags.html', context={'row': obj})
     
     @admin.display(description='Geography', ordering='Specific_region')
     def get_location_html(self, obj):
@@ -177,16 +161,12 @@ class StudiesAdmin(ViewModelAdmin):
             obj.Aria_remote, obj.Climate, obj.Coverage
         )
 
-    @admin.display(description='Case Info', ordering='Diagnosis_method')
+    @admin.display(description='Data Source', ordering='Diagnosis_method')
     def get_case_html(self, obj):
-        return format_html('<div><b>Case Definition: </b>{}<br><b>Surveillance: </b>{}<br>'
-            '<b>Case Findings: </b>{}<br><b>Data Source: </b>{}</div>',
-            obj.Diagnosis_method, obj.Surveillance_setting, obj.Data_source, obj.Data_source_name,
+        return format_html('<div><b>Diagnosis method: </b>{}<br>'
+            '<b>Data source: </b>{}<br><b>Data source name: </b>{}<br><b>Surveillance: </b>{}</div>',
+            obj.Diagnosis_method, obj.Data_source, obj.Data_source_name, obj.Surveillance_setting,
         )
-
-    @admin.display(ordering='Age_general', description='Age Bracket')
-    def get_age_html(self, obj):
-        return get_age_html(obj)
 
     # save email of user that's adding studies inline
     def save_formset(self, request, obj, formset, change):
@@ -201,15 +181,14 @@ class ResultsAdmin(ViewModelAdmin):
     readonly_fields = ('is_approved',)
     
     list_display = (
-        'get_study',
-        'get_study_group',
-        'get_location_html',
+        'get_study_info_html',
+        'get_method_info_html',
         'get_population_html',
-        'get_age_html',
-        'get_observation_time',
         'get_flags_html',
-        'get_measure',
+        'get_point_estimate_html',
     )
+
+    list_display_links = None
 
     list_filter = (
         ('Study__Study_group', ChoiceDropdownFilter), 
@@ -259,56 +238,33 @@ class ResultsAdmin(ViewModelAdmin):
     search_fields = ('Study__Paper_title', 'Measure', 'Specific_location')
     search_help_text = 'Search Study Titles, Measure, and Specific Location for matching keywords. Put quotes around search terms to find exact phrases only.'
 
-    @admin.display(ordering='Study__Paper_title', description='Study')
-    def get_study(self, obj):
-        if obj.Study:
-            return format_html('<a href="{}">{}</a>',
-                reverse('admin:database_studies_change', args=[obj.Study.id]),
-                obj.Study.Paper_title,
-            )
+    # from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        self.request = request
+        return qs
 
-    @admin.display(ordering='Study__Study_group', description='Group')
-    def get_study_group(self, obj):
-        if obj.Study:
-            return obj.Study.Study_group
-        else:
-            return 'Study Missing!'
+    ## For the sake of sensible people make sure the ordering matches the FIRST item that appears in each cell ##
 
-    @admin.display(description='Point Estimate')
-    def get_measure(self, obj):
-        return format_html('<div><b>Point estimate: </b>{}<br><br>Measure: {}<br><br><b>Numerator: </b>{}<br><b>Denominator: </b>{}</div>',
-            obj.Point_estimate, obj.Measure,
-            obj.Numerator, obj.Denominator,
-        )
+    @admin.display(ordering='Study__Paper_title', description='Study details')
+    def get_study_info_html(self, obj):
+        return render_to_string('database/data/result_study_info.html', context={'row': obj})
 
-    @admin.display(description='Population', ordering='Population_gender')
+    @admin.display(ordering='Study__Study_group', description='Method details')
+    def get_method_info_html(self, obj):
+        return render_to_string('database/data/result_method_info.html', context={'row': obj})
+
+    @admin.display(description='Population', ordering='Population_indigenous')
     def get_population_html(self, obj):
-        return format_html('<div><b>Gender: </b>{}</div><br><div><b>Indigenous: </b>{}</div>',
-            obj.Population_gender, obj.Indigenous_population
-        )
-    
-    @admin.display(description='Location', ordering='Specific_location')
-    def get_location_html(self, obj):
-        return format_html('<div><b>Specific: </b>{}<br><b>Jurisdiction: </b>{}<br><b>Country: </b>{}</div>',
-            obj.Specific_location, obj.Jurisdiction, obj.Country,
-        )
+        return render_to_string('database/data/result_population_info.html', context={'row': obj})
 
     @admin.display(description='Flags')
     def get_flags_html(self, obj):
-        return render_to_string('database/row_flags.html', context={'row': obj})
+        return render_to_string('database/data/row_flags.html', context={'row': obj})
 
-    @admin.display(description='Observation Time')
-    def get_observation_time(self, obj):
-        return format_html('<b>{} year{}</b><br>{} to {}',
-            obj.Observation_time_years,
-            '' if obj.Observation_time_years == 1 else 's',
-            obj.Year_start,
-            obj.Year_stop
-        )
-
-    @admin.display(ordering='Age_general', description='Age Bracket')
-    def get_age_html(self, obj):
-        return get_age_html(obj)
+    @admin.display(description='Point Estimate')
+    def get_point_estimate_html(self, obj):
+        return render_to_string('database/data/result_point_estimate.html', context={'row': obj, 'user': self.request.user})
 
     def get_readonly_fields(self, request, obj=None):
             is_superuser = request.user.is_superuser
@@ -322,8 +278,6 @@ admin_site.register(Users, AccountAdmin)
 admin_site.register(Studies, StudiesAdmin)
 admin_site.register(Results, ResultsAdmin)
 admin_site.unregister(Group)
-
-
 
 def get_proxy_admin(model, base_admin):
     """ create generic admin pages for different results/study groups """

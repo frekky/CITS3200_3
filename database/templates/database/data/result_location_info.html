@@ -1,0 +1,22 @@
+<div class="rowdata">
+    <table>
+        <tbody>
+            {% if row.Study %}
+            <tr>
+                <th>Climate</th>
+                <td>{{ row.Study.Climate }}</td>
+            </tr>
+            <tr>
+                <th>ARIA+ classif.</th>
+                <td>{{ row.Study.Aria_remote }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td colspan="2">{{ row.Specific_location }}</td>
+            </tr>
+            <tr>
+                <td colspan="2"><i>{{ row.Jurisdiction }}, {{ row.Country }}</i></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

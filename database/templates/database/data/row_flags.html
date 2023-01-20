@@ -1,0 +1,16 @@
+<div class="rowflags p-1">
+    {% for flag in row.get_flags %}
+    {% if flag.value is not None %}
+        <div class="mb-1">
+            {% if flag.value == True %}
+                <span class="material-icons md-green">check_circle_outline</span>
+            {% elif flag.value == False %}
+                <span class="material-icons md-red">highlight_off</span>
+            {% else %}
+                <span class="material-icons md-grey">help_outline</span>
+            {% endif %}
+            {{ flag.field.verbose_name }}
+        </div>
+    {% endif %}
+    {% endfor %}
+</div>

@@ -275,6 +275,7 @@ class Studies(models.Model):
     def __str__(self):
         return "%s (%s)" % (self.Paper_title, self.Year)
 
+
 class Results(models.Model):
     class Meta:
         verbose_name = 'Result'
@@ -419,27 +420,28 @@ class Results(models.Model):
 
     Proportion = models.BooleanField(
         blank = True,
-        verbose_name = 'Point estimate is proportion',
+        verbose_name = 'Proportion',
         help_text = 'Indicator variable which is “Yes” if point estimate is a proportion and “No” if it is a measure of incidence or prevalence.'
     )
 
     Mortality_flag = models.BooleanField(
         null = True,
         blank = True,
-        verbose_name = 'Point estimate is mortality estimate',
+        verbose_name = 'Mortality',
         help_text = 'Indicator variable which is “Yes” if point estimate is a mortality estimate and “No” or “Unknown” otherwise.'
     )
     
     Recurrent_ARF_flag = models.BooleanField(
         null = True,
         blank = True,
-        verbose_name = 'Point estimate includes recurrent ARF',
+        verbose_name = 'Recurrent ARF',
         help_text = 'Indicator variable which is “Yes” if point estimate includes recurrent ARF and “No” or “Unknown” otherwise (applicable to ARF burden estimates only).'
     )
     
     StrepA_attributable_fraction = models.BooleanField(
         null = True,
         blank = True,
+        verbose_name = 'Strep.A fraction',
         help_text = 'Indicator variable which is “Yes” if point estimate is a proportion which is Strep.A-specific and therefore represents a Strep.A-attributable fraction and “No” or “Unknown” otherwise.'
     )
 
@@ -482,6 +484,37 @@ class Results(models.Model):
             for field in self._meta.get_fields()
             if isinstance(field, models.BooleanField) and field.name != 'is_approved'
         )
+
+    @property
+    def exact_age_text(self):
+        if self.Age_min is not None and self.Age_min > 0:
+            if self.Age_max is not None and self.Age_max < 999:
+                return '%d to %d years old' % (self.Age_min, self.Age_max)
+            else:
+                return '%d years and older' % self.Age_min
+        elif self.Age_max is not None and self.Age_max < 999:
+            return 'Up to %d years old' % self.Age_max
+
+    @property
+    def observation_time_text(self):
+        if self.Observation_time_years is None:
+            return 'N/A'
+            
+        years = int(self.Observation_time_years)
+        years_pl = '' if years == 1 else 's'
+
+        if self.Observation_time_years % 1 == 0:
+            return '%d year%s' % (self.Observation_time_years, years_pl)
+        months = round((self.Observation_time_years % 1) * 12)
+        months_pl = '' if months == 1 else 's'
+
+        if years:
+            return '%d year%s %d month%s' % (years, years_pl, months, months_pl)
+        return '%d month%s' % (months, months_pl)
+
+    @property
+    def change_url(self):
+        return reverse('admin:database_results_change', args=[self.id])
 
     def __str__(self):
         if not self.Study:

@@ -79,3 +79,30 @@ nav ul > li {
 a.deletelink {
     box-sizing: content-box;
 }
+
+.rowdata .material-icons, .rowflags .material-icons {
+    font-size: 150%;
+    margin-top: -3pt;
+}
+
+/* fields in the admin site */
+td[class$="_html"][class^="field-"], th[class$="_html"][class^="field-"] {
+    padding: 0 4px;
+}
+
+td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
+    line-height: initial !important;
+}
+
+.rowdata th {
+    font-weight: lighter;
+}
+
+.rowdata th, .rowdata td {
+    padding: 4px;
+}
+
+.rowdata table {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}

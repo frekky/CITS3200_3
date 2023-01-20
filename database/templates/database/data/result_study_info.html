@@ -1,0 +1,23 @@
+<div class="rowdata">
+    {% if row.Study %}
+    <table>
+        <tbody>
+            <tr>
+                <td>
+                    {{ row.Study.Study_description }}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <a href="{{ row.Study.Paper_link }}"><span class="material-icons">open_in_new</span>{{ row.Study.Paper_title }}</a> ({{ row.Study.Year }})
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bold">{{ row.Study.Disease }}</td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <b><i>Study missing!</i></b>
+    {% endif %}
+</div>

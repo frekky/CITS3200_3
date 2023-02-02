@@ -1,5 +1,5 @@
 """
-WSGI config for Userlogins project.
+WSGI config for Strep A DB project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

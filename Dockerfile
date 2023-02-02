@@ -5,7 +5,7 @@ COPY requirements.txt /app/requirements.txt
 
 COPY static/ /app/static/
 COPY database/ /app/database/
-COPY Userlogins/ /app/app/
+COPY app/ /app/app/
 COPY manage.py /app/manage.py
 COPY uwsgi-app.ini /app/uwsgi.ini
 # override uwsgi-nginx generated config

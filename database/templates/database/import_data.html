@@ -17,17 +17,21 @@
 {% block coltype %}colM{% endblock %}
 
 {% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-form{% endblock %}
-
-{% block content %}
+{% if not is_popup %}
+{% block breadcrumbs %}
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
-    &rsaquo; Import Methods/Results
+    &rsaquo; Import Data
 </div>
+{% endblock %}
+{% endif %}
+
+{% block content %}
 <form enctype="multipart/form-data" action="{% url 'import_data' %}" method="post">
     {% csrf_token %}
     <div class="mx-3">
 
-    <h2 class="text-danger">Warning: Import will replace ALL data in Studies / Results!</h2>
+    <h2 class="text-danger">Warning: Import will clear and replace ALL data in Studies / Results tables!</h2>
     <h3 class="text-danger">Make sure to export a backup copy first!</h3>
     {{ form.as_p }}
     <input type="submit" value="Upload & Import" name="submit">
@@ -35,11 +39,14 @@
     {% if results is not None %}
     <div>
         <h3>Import successful.</h3>
+        {% for list in results %}
+        <h4>{{ list.title }}</h4>
         <ul>
-            {% for error in results %}
-            <li>{{ error }}</li>
+            {% for item in list.items %}
+            <li>{{ item }}</li>
             {% endfor %}
         </ul>
+        {% endfor %}
     </div>
 
     {% else %}

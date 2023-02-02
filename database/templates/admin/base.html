@@ -1,10 +1,11 @@
 {% extends 'database/base.html' %}
 {% load i18n static %}
 
+{% block bs_messages %}{% endblock %}
+
 {% block extraheader %}
 
 <link rel="stylesheet" href="{% block stylesheet %}{% static "admin/css/base.css" %}{% endblock %}">
-<link rel="stylesheet" href="{% static 'css/admin-override.css' %}">
 
 {% if not is_popup and is_nav_sidebar_enabled %}
   <link rel="stylesheet" href="{% static "admin/css/nav_sidebar.css" %}">
@@ -19,6 +20,7 @@
     {% if LANGUAGE_BIDI %}<link rel="stylesheet" href="{% static "admin/css/responsive_rtl.css" %}">{% endif %}
 {% endblock %}
 {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+<link rel="stylesheet" href="{% static 'css/admin-override.css' %}">
 
 {% endblock extraheader %}
 

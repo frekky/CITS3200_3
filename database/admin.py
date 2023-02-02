@@ -8,7 +8,7 @@ from django.urls import reverse
 from rangefilter.filters import NumericRangeFilter
 from admin_action_buttons.admin import ActionButtonsMixin
 
-from database.models import Users, Studies, Results, proxies, is_approved_proxies # Custom admin form imported from models.py
+from database.models import Users, Studies, Results, ImportSource, proxies, is_approved_proxies # Custom admin form imported from models.py
 from .actions import download_as_csv
 from django_admin_listfilter_dropdown.filters import (DropdownFilter, ChoiceDropdownFilter, RelatedDropdownFilter)
 from django.db import models
@@ -37,6 +37,10 @@ class AccountAdmin(ActionButtonsMixin, UserAdmin):
         ),
     )
 
+@admin.register(ImportSource)
+class ImportAdmin(ActionButtonsMixin, ModelAdmin):
+    list_display = ('Original_filename', 'Import_type', 'Row_count', 'Imported_by', 'Import_status')
+
 # override default behaviour to allow viewing by anyone
 class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
     def has_view_permission(self, request, obj=None):
@@ -49,7 +53,7 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(is_approved=True)
+        return qs.filter(Approved_by__isnull=False)
            
     # save email of user that's adding studies/results
     def save_model(self, request, obj, form, change):
@@ -66,7 +70,6 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
 class ResultsInline(admin.StackedInline):
     model = Results
     extra = 0
-    readonly_fields = ('is_approved',)
     
     def get_readonly_fields(self, request, obj=None):
             is_superuser = request.user.is_superuser
@@ -83,13 +86,13 @@ class ResultsInline(admin.StackedInline):
     # exclude fields so they're not viewable by generic users    
     def get_exclude(self, request, obj=None):
             is_superuser = request.user.is_superuser
-            excluded = ['is_approved', 'added_by']
+            excluded = ['Approved_by', 'Created_by']
             if not is_superuser:
                 return excluded
    
 class StudiesAdmin(ViewModelAdmin):
-    inlines = [ResultsInline]
-    readonly_fields = ('is_approved',)
+    #inlines = [ResultsInline]
+    readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
     list_display = (
         'Paper_title',
@@ -102,12 +105,12 @@ class StudiesAdmin(ViewModelAdmin):
     list_filter = (
         ('Study_design', ChoiceDropdownFilter), 
         ('Study_group', ChoiceDropdownFilter), 
-        ('Disease', DropdownFilter),
-        ('Coverage', DropdownFilter),
-        ('Surveillance_setting', DropdownFilter),
+        ('Disease', ChoiceDropdownFilter),
+        ('Coverage', ChoiceDropdownFilter),
+        ('Surveillance_setting', ChoiceDropdownFilter),
         ('Clinical_definition_category', ChoiceDropdownFilter),
-        ('Climate', DropdownFilter), 
-        ('Aria_remote', DropdownFilter),
+        ('Climate', ChoiceDropdownFilter), 
+        ('Aria_remote', ChoiceDropdownFilter),
     )
 
     ordering = ('Paper_title', 'Study_group')
@@ -139,6 +142,11 @@ class StudiesAdmin(ViewModelAdmin):
         'Method_limitations',
         'Limitations_identified',
         'Other_points',
+        'Created_time',
+        'Created_by_name',
+        'Updated_time',
+        'Approved_time',
+        'Approved_by_name',
     ]
 
     def get_readonly_fields(self, request, obj=None):
@@ -178,7 +186,7 @@ class StudiesAdmin(ViewModelAdmin):
 
 
 class ResultsAdmin(ViewModelAdmin):
-    readonly_fields = ('is_approved',)
+    readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
     list_display = (
         'get_study_info_html',
@@ -191,22 +199,33 @@ class ResultsAdmin(ViewModelAdmin):
     list_display_links = None
 
     list_filter = (
-        ('Study__Study_group', ChoiceDropdownFilter), 
-        ('Age_general', DropdownFilter),
-        ('Population_gender', DropdownFilter), 
-        ('Indigenous_population', DropdownFilter),
-        ('Country', DropdownFilter),
-        ('Jurisdiction', DropdownFilter),
-        ('Year_start', NumericRangeFilter),
+        # Methods-related filters
+        ('Study__Study_group', ChoiceDropdownFilter), # hierarchy Study_group -> Disease as sub-category
+        ('Study__Disease', ChoiceDropdownFilter), # multiple select within Study_group options
+        ('Study__Study_design', ChoiceDropdownFilter), # single select
+        ('Study__Diagnosis_method', ChoiceDropdownFilter), # multiple select
+        ('Study__Data_source', ChoiceDropdownFilter), # multiple select
+        ('Study__Surveillance_setting', ChoiceDropdownFilter), # multiple select
+        ('Study__Clinical_definition_category', ChoiceDropdownFilter), # multiple select
+        ('Study__Coverage', ChoiceDropdownFilter), # multiple select
+        ('Study__Climate', ChoiceDropdownFilter), # multiple select
+        ('Study__Aria_remote', ChoiceDropdownFilter), # multiple select
+
+        # Result-specific filters
+        ('Age_general', ChoiceDropdownFilter), # multiple select
+        ('Population_gender', ChoiceDropdownFilter), # multiple select
+        ('Indigenous_population', ChoiceDropdownFilter), # multiple select
+        ('Country', DropdownFilter), # single select hierarchy Country -> Jurisdiction
+        ('Jurisdiction', DropdownFilter), # multiple select from distinct values only with matching Country
+        ('Year_start', NumericRangeFilter), # single filter for entire start/stop range (inclusive of partial range overlaps)
         ('Year_stop', NumericRangeFilter),
-        'Proportion',
-        'StrepA_attributable_fraction',
+        ('Proportion', DropdownFilter), # single select
+        ('StrepA_attributable_fraction', DropdownFilter), # single select
     )
 
     download_as_csv_verbose_names = False
     download_as_csv_fields = [
         ('Study__get_export_id', 'Results_ID'),
-        ('Study__Study_group', 'Result_group'),
         'Age_general',
         'Age_min',
         'Age_max',
@@ -229,7 +248,11 @@ class ResultsAdmin(ViewModelAdmin):
         'Mortality_flag',
         'Recurrent_ARF_flag',
         'StrepA_attributable_fraction',
-        'is_approved'
+        'Created_time',
+        'Created_by_name',
+        'Updated_time',
+        'Approved_time',
+        'Approved_by_name',
     ]
 
     ordering = ('-Study__Study_group', )    

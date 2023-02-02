@@ -5,13 +5,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib import admin
 from django.conf import settings
 
-STUDY_GROUPS = (
-    ('SST', 'Superficial skin and throat'),
-    ('IG', 'Invasive Strep A'),
-    ('ARF', 'ARF'),
-    ('ASPGN', 'APSGN'),
-)
-
 class CustomAccountManager(BaseUserManager):
     
     def create_superuser(self, email, first_name, last_name, password, **other_fields):
@@ -63,29 +56,76 @@ class Users(AbstractBaseUser):
     REQUIRED_FIELDS = ['first_name', 'last_name']
     
     def __str__(self):
-        return self.email
+        return '%s %s <%s>' % (self.first_name, self.last_name, self.email)
     
     def has_perm(self, perm, obj=None):
         return self.is_superuser
     
     def has_module_perms(self, app_label):
         return True
+
+class ImportSource(models.Model):
+    class Meta:
+        verbose_name = 'Imported Datasets'
+        verbose_name_plural = 'Imported Datasets'
+
+    Source_file = models.FileField(upload_to='uploads/imports/%Y/%m/%d/')
+    Original_filename = models.CharField(max_length=255, blank=True)
+    Import_type = models.CharField(max_length=20, blank=True)
+    Row_count = models.PositiveIntegerField(null=True)
+    Import_time = models.DateTimeField(auto_now_add=True)
+    Imported_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True)
+    Import_log = models.TextField(blank=True)
+    Import_status = models.BooleanField(null=True, blank=True)
      
-class Studies(models.Model):
+class MyModel(models.Model):
+    class Meta:
+        abstract = True
+    
+    Import_source = models.ForeignKey(ImportSource, on_delete=models.CASCADE, null=True, blank=True, related_name='+')
+    Created_time = models.DateTimeField(auto_now_add=True)
+    Created_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Submitted by user', related_name='+')
+    Updated_time = models.DateTimeField(auto_now=True)
+    Approved_time = models.DateTimeField(null=True, blank=True)
+    Approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Verified by user', related_name='+')
+
+    @property
+    def Created_by_name(self):
+        if self.Created_by:
+            return str(self.Created_by)
+        else:
+            return 'N/A'
+
+    @property
+    def Approved_by_name(self):
+        if self.Approved_by:
+            return str(self.Approved_by)
+        else:
+            return 'N/A'
+
+class Studies(MyModel):
     class Meta:
         verbose_name = 'Study'
         verbose_name_plural = 'Studies'
 
     Unique_identifier = models.CharField(
-        max_length = 12,
+        max_length = 20,
         null = True,
         blank = True,
         verbose_name = 'Unique Identifier (Internal Use Only)',
         help_text = 'Identifier linking individual Results to each Study in the Studies/Methods data'
     ) 
 
+    STUDY_GROUPS = (
+        (x, x) for x in (
+            'Superficial skin and throat',
+            'Invasive Strep A',
+            'ARF',
+            'APSGN',
+        )
+    )
     Study_group = models.CharField(
-        max_length = 5,
+        max_length = 50,
         choices = STUDY_GROUPS,
         blank = True,
         verbose_name = 'Study Group',
@@ -115,29 +155,50 @@ class Studies(models.Model):
         help_text = 'Year of publication of manuscript/report.'
     )
 
+    DISEASE_TYPES = [
+        (x, x) for x in (
+            'AGN',
+            'ARF',
+            'iStrep A - NF',
+            'iStrep A - Scarlet fever',
+            'iStrep A - bacteraemia',
+            'iStrep A - cellulitis',
+            'iStrep A - pneumonia',
+            'iStrep A - sepsis',
+            'iStrep A - severe TSS',
+            'iStrep A - all',
+            'Superficial skin & throat infection',
+            'Superficial throat infection',
+            'Superficial skin infection',
+            'Other',
+        )
+    ]
     Disease = models.CharField(
         max_length = 100,
         blank = True,
+        choices = DISEASE_TYPES,
         verbose_name = 'Specific Disease',
         help_text = "Subcategory of disease within the broader study group. Example: iStrepA - bactaraemia"
     )
 
     STUDY_DESIGNS = (
-        ('CS', 'Case series'),
-        ('CST', 'Cross-sectional'),
-        ('P', 'Prospective'),
-        ('PRP', 'Prospective and Retrospective'),
-        ('PC', 'Prospective cohort'),
-        ('R', 'Report'),
-        ('RP', 'Retrospective'),  
-        ('RPR', 'Retrospective review'), 
-        ('RPC', 'Retrospective cohort'),  
-        ('RA', 'Review article'),              
-        ('O', 'Other'),        
+        (x, x) for x in (
+            'Case series',
+            'Cross-sectional',
+            'Prospective',
+            'Prospective and Retrospective',
+            'Prospective cohort',
+            'Report',
+            'Retrospective',
+            'Retrospective review',
+            'Retrospective cohort',
+            'Review article',
+            'Other',
+        )      
     )
     
     Study_design = models.CharField(
-        max_length = 3,
+        max_length = 50,
         choices = STUDY_DESIGNS,
         help_text = 'Study classification based on the temporality of data collection. '
             'Prospective (if study involves screening or active surveillance or primary data collection) or retrospective '
@@ -153,25 +214,65 @@ class Studies(models.Model):
         help_text = 'Name of the first author, abbreviated name of journal and year of manuscript publication. Example: McDonald, Clin Infect Dis, 2006'
     )
 
+    DIAGNOSIS_METHODS = (
+        (x, x) for x in (
+            'Clinical and laboratory diagnosis',
+            'Clinical diagnosis only',
+            'ICD codes',
+            'Laboratory diagnosis',
+            'Notifications',
+            'Primary Health Care codes (SNOMED/ICPC)',
+            'Self report (questionnaire/survey)',
+            'Other',
+        )
+    )
     Diagnosis_method = models.CharField(
         max_length = 200,
         blank = True,
+        choices = DIAGNOSIS_METHODS,
         help_text = 'Indicates the process used to identify/diagnose Strep A-associated diseases, such as: notifications, ICD codes, '
             'Snowmed/ICPC codes, clinical diagnosis, laboratory diagnosis, echocardiography or combined methods.'
     )
 
+    DATA_SOURCE_TYPES = (
+        (x, x) for x in (
+            'ED presentations only',
+            'Hospital admissions',
+            'Hospital admissions & active surveillance',
+            'ICU admissions',
+            'Laboratory records only',
+            'Medical records only',
+            'Multiple sources',
+            'Outbreak investigations',
+            'PHC health service data',
+            'Register or notification',
+            'Screening programme',
+            'Survey/Questionnaire',
+            'Other',
+        )
+    )
     Data_source = models.CharField(
-        max_length = 200,
+        max_length = 50,
         blank = True,
+        choices = DATA_SOURCE_TYPES,
         verbose_name = 'Data source',
         help_text = 'Method of case finding/identification, for example: screening or active surveillance for reporting '
             'cases of impetigo or skin sores; population registers for ARF; medical record review.'
     )
     
-    SURVEILLANCE_SETTINGS = [
-        (x, x) for x in ('Unknown', 'Community', 'Hospital', 'Household', 'Laboratory',
-            'Multiple', 'Primary health centre', 'School', 'Other')
-    ]
+    SURVEILLANCE_SETTINGS = (
+        (x, x) for x in (
+            'Unknown',
+            'Community',
+            'Hospital',
+            'Household',
+            'Laboratory',
+            'Multiple',
+            'Primary health centre',
+            'Schools',
+            'Other'
+        )
+    )
 
     Surveillance_setting = models.CharField(
         max_length = 25,
@@ -189,11 +290,16 @@ class Studies(models.Model):
         help_text = 'Name of the dataset, project, consortium or specific disease register (if applicable).'
     )
 
-    CDC_CHOICES = [
-        (x, x) for x in ('Undefined or unknown', 'Both confirmed and probable cases',
-        'Confirmed case', 'Definite and probable ARF', 'Suspected or probable case', 'Other')
-    ]
-
+    CDC_CHOICES = (
+        (x, x) for x in (
+            'Undefined or unknown',
+            'Both confirmed and probable cases',
+            'Confirmed case',
+            'Definite and probable ARF',
+            'Suspected or probable case',
+            'Other'
+        )
+    )
     Clinical_definition_category = models.CharField(
         max_length = 50,
         blank = True,
@@ -203,22 +309,49 @@ class Studies(models.Model):
             'depend on the disease and can include confirmed, suspected, probably, active, inactive, recurrent, total, undefined or unknown, subclinical or asymptomatic.'
     )
     
+    COVERAGE_CHOICES = (
+        (x, x) for x in (
+            'National/multi-jurisdictional',
+            'Single Institution/service',
+            'State',
+            'Subnational/region',
+        )
+    )
     Coverage = models.CharField(
         max_length = 200,
         blank = True,
+        choices = COVERAGE_CHOICES,
         verbose_name = 'Geographic Coverage Level',
         help_text = 'Level of geographic coverage in the study, categorised as (i) national/multli-jurisdictional, (ii) state, (iii) subnational/ regional, (iv) single institution/ service.'
     )
 
+    CLIMATE_CHOICES = (
+        (x, x) for x in (
+            'Arid',
+            'Combination',
+            'Temperate',
+            'Tropical',
+        )
+    )
     Climate = models.CharField(
-        max_length = 200,
+        max_length = 20,
         blank = True,
+        choices = CLIMATE_CHOICES,
         help_text = 'Climatic conditions based on the geographic coverage of studies, for example: “Tropical” for studies conducted at the Top-End NT, “Temperate” for studies from Victoria or NSW.'
     )
     
+    REMOTENESS_CHOICES = (
+        (x, x) for x in (
+            'Combination',
+            'Metropolitan',
+            'Regional',
+            'Remote',
+        )
+    )
     Aria_remote = models.CharField(
-        max_length = 200,
+        max_length = 20,
         blank = True,
+        choices = REMOTENESS_CHOICES,
         verbose_name = 'ARIA+ Remoteness Classification',
         help_text = 'Classification into metropolitan, regional and remote areas based on the ARIA+ (Accessibility and Remoteness Index of Australia) system.'
     )
@@ -240,22 +373,6 @@ class Studies(models.Model):
         help_text = 'This variable captures any other relevant notes relating to the study that may impact the interpretation of Strep A burden estimates.'
     )
 
-    # For approving the adding of studies
-    is_approved = models.BooleanField(
-        default = False,
-        verbose_name = 'Study approved',
-        blank = False,
-        help_text = _('Designates whether this study has been approved or is pending approval.')
-    )
-    
-    added_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null = True,
-        blank = True,
-        on_delete = models.SET_NULL,
-        verbose_name = 'Study added/submitted by user',
-    )
-    
     def get_study_design(self):
         for code, desc in self.STUDY_DESIGNS:
             if code == self.Study_design:
@@ -269,14 +386,14 @@ class Studies(models.Model):
         return (
             {'field': field, 'value': getattr(self, field.name)}
             for field in self._meta.get_fields()
-            if isinstance(field, models.BooleanField) and field.name != 'is_approved'
+            if isinstance(field, models.BooleanField)
         )
 
     def __str__(self):
         return "%s (%s)" % (self.Paper_title, self.Year)
 
 
-class Results(models.Model):
+class Results(MyModel):
     class Meta:
         verbose_name = 'Result'
         verbose_name_plural = 'Results' 
@@ -284,16 +401,27 @@ class Results(models.Model):
     Study = models.ForeignKey(
         Studies,
         on_delete = models.CASCADE,
-        null = True,
         help_text = "Select or add the study where these results were published.",
     )
 
+    AGE_CHOICES = [
+        (x, x) for x in (
+            'Infants',
+            'Children',
+            'Children and adolescents',
+            'Children, adolescents and young adults',
+            'Adolescents and adults',
+            'Adults',
+            'Elderly adults',
+            'All ages',
+        )
+    ]
     Age_general = models.CharField(
         max_length = 50,
         blank = True,
         verbose_name = 'Age category',
-        help_text = 'The general age grouping considered for inclusion by the study, classified as “all ages” (if studies did not have any age restrictions); '
-            '“infants”, “young children”, “children and adolescents”, “18 years and younger” and “16 years and older”. '
+        choices = AGE_CHOICES,
+        help_text = 'The general age grouping considered for inclusion by the study.'
     )
     
     Age_min = models.DecimalField(
@@ -323,9 +451,17 @@ class Results(models.Model):
         help_text = 'More specific description of age group as reported by the study.'
     )
     
+    GENDER_CHOICES = [
+        (x, x) for x in (
+            'Females',
+            'Males',
+            'Males and females',
+        )
+    ]
     Population_gender = models.CharField(
         max_length = 30,
         blank = True,
+        choices = GENDER_CHOICES,
         verbose_name = 'Population - Gender',
         help_text = 'This variable captures stratification by sex (where reported), with categories of “males”, “females”, “males and females”.'
     )
@@ -333,13 +469,24 @@ class Results(models.Model):
     Indigenous_status = models.BooleanField(
         blank = True,
         null = True,
-        verbose_name = 'Population - Indigenous Status',
-        help_text = 'Flag indicating whether this measure involves an Indigenous population',
+        verbose_name = 'Indigenous',
+        help_text = 'Flag indicating whether the measure includes an Indigenous population',
     )
     
+    INDIGENOUS_POPULATION_CHOICES = [
+        (x, x) for x in (
+            'Aboriginal population',
+            'General - special population',
+            'General population',
+            'Non-Indigenous population',
+            'Not Defined',
+            'Torres Strait Islander',
+        )
+    ]
     Indigenous_population = models.CharField(
         max_length = 50,
         blank = True,
+        choices = INDIGENOUS_POPULATION_CHOICES,
         help_text = 'This variable captures stratification of the Indigenous population (where reported) into “Aboriginal”, “Torres Strait Islander” or “both Aboriginal and Torres Strait Islanders”.'
     )
     
@@ -415,6 +562,7 @@ class Results(models.Model):
     
     Interpolated_from_graph = models.BooleanField(
         blank = True,
+        verbose_name = 'Interpolated',
         help_text = 'Indicator variable which is “Yes” if point estimate is interpolated and “No” if a numeric figure is given in the publication.'
     )
 
@@ -454,29 +602,16 @@ class Results(models.Model):
     Hospitalised_flag = models.BooleanField(
         null = True,
         blank = True,
-        verbose_name = 'Point estimate includes hospitalised patients',
+        verbose_name = 'Hospitalised',
+        help_text = 'Point estimate includes hospitalised patients',
     )
 
     Schoolchildren_flag = models.BooleanField(
         null = True,
         blank = True,
-        verbose_name = 'Point estimate includes data of school children',
+        verbose_name = 'Schoolchildren',
+        help_text = 'Point estimate includes data of school children',
     )
-
-    # For approving the adding of results
-    is_approved = models.BooleanField(
-        default = False,
-        verbose_name = 'Results approved',
-        blank = False,
-        help_text = _('Determines whether this study has been approved by an administrator or is submitted and pending approval.')
-    )
-    
-    added_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null = True,
-        blank = True,
-        on_delete = models.SET_NULL,
-        verbose_name = 'Results added/submitted by user')
     
     def get_flags(self):
         return (
@@ -551,9 +686,6 @@ def proxy_model_factory(model, verbose_name, **filter_args):
 
     return cls
 
-# one way to possibly add admin page approval function
-#UnapprovedResults = proxy_model_factory(Results, 'Results (Pending Approval)', Is_approved=False)
-
 is_approved_proxies = []
 def is_approved_proxy_model_factory(model, verbose_name, **filter_args):
     global is_approved_proxies
@@ -575,5 +707,5 @@ def is_approved_proxy_model_factory(model, verbose_name, **filter_args):
 
     return cls
 
-UnapprovedStudies = is_approved_proxy_model_factory(Studies, 'Studies (Pending Approval)', is_approved=False)
-UnapprovedResults = is_approved_proxy_model_factory(Results, 'Results (Pending Approval)', is_approved=False)
+UnapprovedStudies = is_approved_proxy_model_factory(Studies, 'Studies (Pending Approval)', Approved_by__isnull=True)
+UnapprovedResults = is_approved_proxy_model_factory(Results, 'Results (Pending Approval)', Approved_by__isnull=True)

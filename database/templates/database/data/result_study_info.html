@@ -3,16 +3,19 @@
     <table>
         <tbody>
             <tr>
+                <th>Description</th>
                 <td>
-                    {{ row.Study.Study_description }}
+                    {{ row.Study.Study_description }} {% if row.Study.Unique_identifier %}({{ row.Study.Unique_identifier }}){% endif %}
                 </td>
             </tr>
             <tr>
+                <th>Title</th>
                 <td>
                     <a href="{{ row.Study.Paper_link }}"><span class="material-icons">open_in_new</span>{{ row.Study.Paper_title }}</a> ({{ row.Study.Year }})
                 </td>
             </tr>
             <tr>
+                <th>Disease</th>
                 <td class="fw-bold">{{ row.Study.Disease }}</td>
             </tr>
         </tbody>

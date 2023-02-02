@@ -106,3 +106,11 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     margin-top: 3px;
     margin-bottom: 3px;
 }
+
+.rowflags {
+    white-space: nowrap;
+}
+
+#changelist-filter select {
+    height: initial;
+}

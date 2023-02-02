@@ -2,14 +2,16 @@
 
 {% block object-tools-items %}
   {% if has_add_permission %}
+  {% if not cl.opts.model_name == 'importsource' %}
   <li>
     {% url cl.opts|admin_urlname:'add' as add_url %}
     <a href="{% add_preserved_filters add_url is_popup to_field %}" class="addlink">
       {% blocktranslate with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktranslate %}
     </a>
   </li>
+  {% endif %}
   {% if request.user.is_superuser %}
-  {% if cl.opts.model_name == 'studies' or cl.opts.model_name == 'results' %}
+  {% if cl.opts.model_name == 'studies' or cl.opts.model_name == 'results' or cl.opts.model_name == 'importsource' %}
   <li>
     <a href="{% url 'import_data' %}" class="addlink">
       Import Methods/Results

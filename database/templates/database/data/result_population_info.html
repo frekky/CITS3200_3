@@ -21,7 +21,11 @@
             <tr>
                 <th>Obsv. Time</th>
                 <td>
+                    {% if row.Year_start == row.Year_stop %}
+                    Year {{ row.Year_start }} - {{ row.observation_time_text }}
+                    {% else %}
                     {{ row.Year_start }} to {{ row.Year_stop }} ({{ row.observation_time_text }})
+                    {% endif %}
                 </td>
             </tr>
         </tbody>

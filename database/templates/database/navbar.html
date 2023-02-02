@@ -16,40 +16,45 @@
 		<span class="navbar-toggler-icon"></span>
 	</button>
 	<div class="collapse navbar-collapse" id="navbarNav">
-		<ul class="navbar-nav">
+		<ul class="navbar-nav me-3">
 			<li class="nav-item active">
 				<a class="nav-link" href="{% url 'home' %}">
 					Home
 				</a>
 			</li>
 			{% if request.user.is_authenticated %}
-				<li class="nav-item">
+				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'visitor' %}">
 						My Profile
 					</a>
 				</li>
-				<li class="nav-item">
+				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'admin:database_studies_changelist' %}">
 						Search Studies
 					</a>
 				</li>
-				<li class="nav-item">
+				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'admin:database_results_changelist' %}">
 						Search Results
 					</a>
 				</li>
 			{% endif %}
-			{% if request.user.is_staff %}
-				<li class="nav-item">
+			{% if request.user.is_staff or request.user.is_superuser %}
+				<li class="nav-item me-2">
+					<a class="nav-link" href="{% url 'admin:database_users_changelist' %}">
+						Manage Users
+					</a>
+				</li>
+				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'admin:index' %}">
 						Admin Site
 					</a>
 				</li>
 			{% endif %}
 		</ul>
-		<ul class="navbar-nav ml-auto">
+		<ul class="navbar-nav ms-auto">
 			{% if not request.user.is_authenticated %}
-			<li class="nav-item">
+			<li class="nav-item mx-3">
 				<a href="{% url 'login' %}">
 					<btn class="btn btn-primary">
 						Login
@@ -57,7 +62,7 @@
 				</a>
 			</li>
 			{% else %}
-			<li class="nav-item">
+			<li class="nav-item mx-3">
 				<a href="{% url 'logout' %}">
 					<btn class="btn btn-primary">
 						Log out

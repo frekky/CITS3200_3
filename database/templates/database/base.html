@@ -31,7 +31,7 @@
     	{% include 'database/navbar.html' %}
     {% endif %}
 	
-	{% include 'database/messages.html' %}
+	{% block bs_messages %}{% include 'database/messages.html' %}{% endblock %}
 
 	{% block main %}{% endblock %}
 

@@ -6,6 +6,7 @@ class StrepAAdminSite(admin.AdminSite):
 	index_title = 'Database contents'
 
 	login_template = 'database/login.html'
+	enable_nav_sidebar = False
 
 	def has_permission(self, request):
 		# all users have implicit permission to access the admin site (because it is not just for admins)
@@ -34,5 +35,12 @@ class StrepAAdminSite(admin.AdminSite):
 			app['models'].sort(key=lambda x: ordering.get(x['name'], x['name']))
 
 		return app_list
+
+	def app_index(self, request, app_label, extra_context=None):
+		extra_context = {
+			'title': self.site_header,
+			**(extra_context or {}),
+		}
+		return super().app_index(request, app_label, extra_context)
 
 admin_site = StrepAAdminSite()

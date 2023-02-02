@@ -1,5 +1,6 @@
 import csv
 import logging
+import io
 
 from django.db import transaction
 from django.db.models import fields
@@ -9,7 +10,7 @@ import decimal
 
 logger = logging.getLogger(__name__)
 
-NULL_VALUES = ('n/a', 'not applicable', 'none', 'not defined', '')
+NULL_VALUES = ('n/a', 'not applicable', 'none', 'not defined', '', 'missing')
 TRUE_VALUES = ('t', '1', 'yes', 'y', 'true')
 FALSE_VALUES = ('f', '0', 'no', 'n', 'false')
 
@@ -74,10 +75,10 @@ def parse_django_field_value(model, field, value):
                 for c in djfield.choices:
                     if value.lower() == c[1].lower() or value.lower() == c[0].lower():
                         return (c[0], True)
-                return ('Value "%s" not available for choice field %s' % (value, field), False)
+                return ('"%s" is not an allowed option' % (value), False)
             if len(value) >= djfield.max_length:
-                return ('Value "%s" too long for field %s (value was %d characters long and the limit is %d)' % (
-                    value, field, len(value), djfield.max_length
+                return ('"%s" is too long (max length %d)' % (
+                    value, djfield.max_length
                 ), False)
             return (value or '', True)
         elif isinstance(djfield, fields.TextField):
@@ -96,104 +97,106 @@ def parse_django_field_value(model, field, value):
             value = int(value.replace(',', ''))
         elif isinstance(djfield, fields.BooleanField):
             value = parse_bool(value)
-        else:
-            pass
+            if not value and not djfield.null:
+                value = False
+
+        elif isinstance(djfield, fields.ForeignKey):
+            return ("Can't import related field", False)
 
         return value, True
-            
-    except (ValueError, AttributeError, decimal.InvalidOperation):
-        return '%s: bad field value "%s" for field "%s"' % (
-            model._meta.model_name, value, field
-        ), False
+
+    except ValueError:
+        return "Can't parse value '%s'" % value, False
+
+    except decimal.InvalidOperation:
+        return "Invalid decimal value '%s'" % value, False
+
     except FieldDoesNotExist:
-        return '%s: field "%s" does not exist' % (model._meta.model_name, field), False
+        return "No such field exists", False
 
-def import_methods_results(studies_csv, results_csv):
-    # import studies first
-    all_errors = []
+def import_csv_file(import_source, for_each_row):
+    csv_text = import_source.Source_file.read().decode('utf-8', errors='replace')
+    csv_stream = io.StringIO(csv_text)
+    csv_reader = csv.DictReader(csv_stream)
 
-    reader = csv.DictReader(studies_csv)
+    instances = []
+    row_num = 1
+    log = ''
+    okay = True
+    for csv_row in csv_reader:
+        row_num += 1
+        instance, msg = for_each_row(csv_row, import_source)
+        if not instance:
+            log += 'Row %d: Error: %s\n' % (row_num, msg)
+            okay = False
+        elif msg:
+            log += 'Row %d: Warning: %s\n' % (row_num, msg)
+        
+        if instance:
+            instances.append(instance)
+
+    import_source.Import_log = log
+    import_source.Import_status = okay
+    import_source.Row_count = len(instances)
+    import_source.save()
+
+    return okay, instances
     
-    with transaction.atomic():
-        Studies.objects.all().delete()
-        n = 1
-        for row in reader:
-            if not 'Unique_identifier' in row:
-                return ['Could not find Unique_identifier field in Studies CSV file']
-            
-            n += 1
-            study = Studies()
-            row_errors = []
-            #fields = ('Age_general', 'Age_min', 'Age_max', 'Age_original', 'Population_gender', 'Indigenous_status', 'Indigenous_population')
-            for field, value in row.items():
-                if field == 'SES_reported':
-                    field = 'Ses_reported'
-                elif field == 'Data_source__if_applicable_':
-                    field = 'Data_source'
-                
-                value, ok = parse_django_field_value(Studies, field, value)
-                if not ok:
-                    row_errors.append(value)
-                else:
-                    setattr(study, field, value)
-            if len(row_errors) > 0:
-                logger.error('Study id %s has data inconsistencies: %s' % (study.Unique_identifier, ', '.join(row_errors)))
-                study.Notes += '\nData Inconsistencies Detected:\n' + '\n'.join(row_errors)
-                all_errors.append('Studies/Methods row %d is inconsistent: %s' % (n, ', '.join(row_errors)))
+def import_csv_studies_row(row, import_source):
+    study = Studies(Import_source=import_source, Approved_by=import_source.Imported_by, Approved_time=import_source.Import_time)
+    field_errors = []
 
-            if not 'is_approved' in row:
-                study.is_approved = True
-            study.save()
+    for field, value in row.items():
 
-    # then results
-    reader = csv.DictReader(results_csv)
-    with transaction.atomic():
-        Results.objects.all().delete()
-        n = 1
-        for row in reader:
-            n += 1
-            result = Results()
-            row_errors = []
-            for field, value in row.items():
-                if field in ('Results_ID', 'Result_group'):
-                    continue
-                
-                if field == 'Data_source__if_applicable_':
-                    field = 'Data_source'
-                
-                parsed_value, ok = parse_django_field_value(Results, field, value)
+        # skip foreign keys & auto fields
+        if field in ('Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
+            continue
+        
+        value, ok = parse_django_field_value(Studies, field, value)
+        if not ok:
+            field_errors.append('%s: %s' % (field, value))
+        else:
+            setattr(study, field, value)
 
-                if not ok:
-                    logger.error("Results: row %d: can't parse value '%s' for field %s" % (n, value, field))
-                    row_errors.append("Couldn't parse value '%s' for field %s" % (value, field))
-                else:
-                    setattr(result, field, parsed_value)
+    return study, (', '.join(field_errors) if len(field_errors) > 0 else None)
 
-            study_id = row['Results_ID']
-            studies = list(Studies.objects.filter(Unique_identifier=study_id))
-            if len(studies) == 0 and study_id:
-                try:
-                    studies = list(Studies.objects.filter(id=study_id))
-                except:
-                    pass
+def import_csv_results_row(row, import_source):
+    result = Results(Import_source=import_source, Approved_by=import_source.Imported_by, Approved_time=import_source.Import_time)
+    field_errors = []
 
-            if not study_id:
-                logger.error('Results row %d: Study/Results Unique ID is blank!' % n)
-                row_errors.append('Row %d: Study ID is blank!' % n)
-            elif len(studies) == 0:
-                logger.error('Results: No study found with ID "%s"' % study_id)
-                row_errors.append('No matching study found with Study ID %s in group %s' % (study_id, row['Result_group']))
-            elif len(studies) > 1:
-                logger.error('Multiple studies found with id "%s"' % study_id)
-                result.Study = studies[0]
-                row_errors.append('Multiple studies match Study ID %s\n' % study_id)
-            else:
-                result.Study = studies[0]
+    for field, value in row.items():
 
-            if len(row_errors) > 0:
-                result.Notes += '\nData Inconsistencies Detected:\n' + '\n'.join(row_errors)
-                all_errors.append('Results row %d is inconsistent: %s' % (n, ', '.join(row_errors)))
-            if not 'is_approved' in row:
-                result.is_approved = True
-            result.save()
-    return all_errors
+        # skip foreign key & auto fields
+        if field in ('Results_ID', 'Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
+            continue
+        
+        value, ok = parse_django_field_value(Results, field, value)
+        if not ok:
+            field_errors.append("%s: %s" % (field, value))
+        else:
+            setattr(result, field, value)
+
+    # link to related study/methods row based on Unique_identifier = Results_ID
+    if 'Results_ID' in row and (study_id := row['Results_ID']):
+        # check Unique_identifier first
+        studies = list(Studies.objects.filter(Unique_identifier=study_id))
+        if len(studies) == 0 and study_id:
+            try:
+                # nothing found: try searching by database ID instead (ie. for online-submitted studies/results)
+                studies = list(Studies.objects.filter(id=study_id))
+            except:
+                pass
+
+        if len(studies) == 0:
+            field_errors.append("Study not found (%s)" % study_id)
+            result = None
+        elif len(studies) > 1:
+            field_errors.append("Multiple studies found (%s)" % study_id)
+            result = None
+        else:
+            result.Study = studies[0]
+
+    else:
+        return None, 'Results_ID is missing or blank'
+
+    return result, (', '.join(field_errors) if len(field_errors) > 0 else None)

@@ -76,3 +76,4 @@ volumes:
   etc_letsencrypt:
   le_well_known:
   pgbackups:
+  uploads:

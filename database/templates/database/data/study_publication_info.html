@@ -1,0 +1,26 @@
+<div class="rowdata">
+    <table>
+        <tbody>
+            <tr>
+                <th>Description</th>
+                <td>
+                    {{ row.Study_description }} {% if row.Unique_identifier %}({{ row.Unique_identifier }}){% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Title</th>
+                <td>
+                    <a href="{{ row.Paper_link }}"><span class="material-icons">open_in_new</span>{{ row.Paper_title }}</a> ({{ row.Year }})
+                </td>
+            </tr>
+            <tr>
+                <th>Disease</th>
+                <td class="fw-bold">{{ row.Disease }}</td>
+            </tr>
+            <tr>
+                <th>Study design</th>
+                <td>{{ row.Study_design }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

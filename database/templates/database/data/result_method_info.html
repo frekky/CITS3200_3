@@ -4,7 +4,7 @@
         <tbody>
             <tr>
                 <th>Data source</th>
-                <td>{{ row.Study.Data_source }} {% if row.Study.Data_source_name %}{{ row.Study.Data_source_name }}{% endif %}</td>
+                <td>{{ row.Study.Data_source }} {% if row.Study.Data_source_name %}<br><i>{{ row.Study.Data_source_name }}</i>{% endif %}</td>
             </tr>
             <tr>
                 <th>Study design</th>
@@ -15,14 +15,10 @@
                 <td>{{ row.Study.Diagnosis_method }}</td>
             </tr>
             <tr>
-                <th>Clin. def. category</th>
+                <th>Clin.def. category</th>
                 <td>{{ row.Study.Clinical_definition_category }}</td>
             </tr>
         </tbody>
     </table>
-    <!--<div class="mb-1">{{ row.Study.Disease }}</div>
-    <div class="mb-1">{{ row.Study.Study_design }}</div>
-    <div class="mb-1">{{ row.Study.Diagnosis_method }}</div>
-    <div class="">{{ row.Study.Data_source }} {% if row.Study.Data_source_name %}{{ row.Study.Data_source_name }}{% endif %}</div>-->
     {% endif %}
 </div>

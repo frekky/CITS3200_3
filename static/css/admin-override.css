@@ -114,3 +114,61 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 #changelist-filter select {
     height: initial;
 }
+
+/* Results list page column width optimisation */
+.model-results.change-list #result_list, .model-studies.change-list #result_list {
+    position: relative;
+}
+
+.model-results.change-list #result_list .column-get_study_info_html {
+    max-width: 25em;
+}
+
+.model-results.change-list #result_list .field-get_publication_html th {
+    width: 7em;
+}
+
+.model-results.change-list #result_list .column-get_population_html {
+    min-width: 24em;
+}
+
+.model-results.change-list .field-get_population_html th {
+    width: 7em;
+}
+
+.model-results.change-list #result_list .column-get_method_info_html {
+    min-width: 20%;
+}
+
+.model-results.change-list .field-get_method_info_html th {
+    width: 11em;
+}
+
+.model-results.change-list #result_list .column-get_point_estimate_html {
+    width: 22em;
+}
+
+/* Studies list page column widths */
+.model-studies.change-list #result_list .column-get_publication_html {
+    max-width: 30em;
+}
+
+.model-studies.change-list #result_list .field-get_publication_html th {
+    width: 8.5em;
+}
+
+.model-studies.change-list #result_list .field-get_location_html th {
+    width: 7em;
+}
+
+.model-studies.change-list #result_list .field-get_notes_html th {
+    width: 7em;
+}
+
+.model-studies.change-list #result_list .column-get_method_html {
+    min-width: 25%;
+}
+
+.model-studies.change-list #result_list .field-get_method_html th {
+    width: 11em;
+}

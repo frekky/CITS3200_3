@@ -95,20 +95,24 @@ class StudiesAdmin(ViewModelAdmin):
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
     list_display = (
-        'Paper_title',
-        'get_info_html',
+        'get_publication_html',
+        'get_method_html',
         'get_location_html',
-        'get_case_html',
-        'get_flags_html'
+        'get_notes_html',
     )
-    
+
+    list_display_links = None
+
     list_filter = (
-        ('Study_design', ChoiceDropdownFilter), 
         ('Study_group', ChoiceDropdownFilter), 
         ('Disease', ChoiceDropdownFilter),
-        ('Coverage', ChoiceDropdownFilter),
+        ('Year', NumericRangeFilter),
+        ('Study_design', ChoiceDropdownFilter),
+        ('Diagnosis_method', ChoiceDropdownFilter),
+        ('Data_source', ChoiceDropdownFilter),
         ('Surveillance_setting', ChoiceDropdownFilter),
         ('Clinical_definition_category', ChoiceDropdownFilter),
+        ('Coverage', ChoiceDropdownFilter),
         ('Climate', ChoiceDropdownFilter), 
         ('Aria_remote', ChoiceDropdownFilter),
     )
@@ -155,26 +159,21 @@ class StudiesAdmin(ViewModelAdmin):
             return []
         return self.readonly_fields
 
-    @admin.display(ordering='Year', description='Study Info')
-    def get_info_html(self, obj):
-        return render_to_string('database/data/study_info.html', context={'row': obj})
+    @admin.display(ordering='Study_description', description='Study Details')
+    def get_publication_html(self, obj):
+        return render_to_string('database/data/study_publication_info.html', context={'row': obj})
 
-    @admin.display(description='Flags')
-    def get_flags_html(self, obj):
-        return render_to_string('database/data/row_flags.html', context={'row': obj})
-    
-    @admin.display(description='Geography', ordering='Specific_region')
+    @admin.display(description='Geography', ordering='Coverage')
     def get_location_html(self, obj):
-        return format_html('<div><b>Aria Remote: </b>{}<br><b>Climate: </b>{}<br><b>Coverage: </b>{}</div>',
-            obj.Aria_remote, obj.Climate, obj.Coverage
-        )
+        return render_to_string('database/data/study_geography_info.html', context={'row': obj})
 
-    @admin.display(description='Data Source', ordering='Diagnosis_method')
-    def get_case_html(self, obj):
-        return format_html('<div><b>Diagnosis method: </b>{}<br>'
-            '<b>Data source: </b>{}<br><b>Data source name: </b>{}<br><b>Surveillance: </b>{}</div>',
-            obj.Diagnosis_method, obj.Data_source, obj.Data_source_name, obj.Surveillance_setting,
-        )
+    @admin.display(description='Method Details', ordering='Diagnosis_method')
+    def get_method_html(self, obj):
+        return render_to_string('database/data/study_method_info.html', context={'row': obj})
+
+    @admin.display(description='Notes', ordering='Limitations_identified')
+    def get_notes_html(self, obj):
+        return render_to_string('database/data/study_notes.html', context={'row': obj})
 
     # save email of user that's adding studies inline
     def save_formset(self, request, obj, formset, change):
@@ -192,6 +191,7 @@ class ResultsAdmin(ViewModelAdmin):
         'get_study_info_html',
         'get_method_info_html',
         'get_population_html',
+        'get_location_html',
         'get_flags_html',
         'get_point_estimate_html',
     )
@@ -202,6 +202,7 @@ class ResultsAdmin(ViewModelAdmin):
         # Methods-related filters
         ('Study__Study_group', ChoiceDropdownFilter), # hierarchy Study_group -> Disease as sub-category
         ('Study__Disease', ChoiceDropdownFilter), # multiple select within Study_group options
+        ('Study__Year', NumericRangeFilter), # standard number range (inclusive)
         ('Study__Study_design', ChoiceDropdownFilter), # single select
         ('Study__Diagnosis_method', ChoiceDropdownFilter), # multiple select
         ('Study__Data_source', ChoiceDropdownFilter), # multiple select
@@ -280,6 +281,10 @@ class ResultsAdmin(ViewModelAdmin):
     @admin.display(description='Population', ordering='Population_indigenous')
     def get_population_html(self, obj):
         return render_to_string('database/data/result_population_info.html', context={'row': obj})
+
+    @admin.display(description='Geographic Info', ordering='Specific_location')
+    def get_location_html(self, obj):
+        return render_to_string('database/data/result_location_info.html', context={'row': obj})
 
     @admin.display(description='Flags')
     def get_flags_html(self, obj):

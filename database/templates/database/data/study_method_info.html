@@ -1,0 +1,22 @@
+<div class="rowdata">
+    <table>
+        <tbody>
+            <tr>
+                <th>Data source</th>
+                <td>{{ row.Data_source }} {% if row.Data_source_name %}<br><i>{{ row.Data_source_name }}</i>{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Diag. method</th>
+                <td>{{ row.Diagnosis_method }}</td>
+            </tr>
+            <tr>
+                <th>Clin.def. category</th>
+                <td>{{ row.Clinical_definition_category }}</td>
+            </tr>
+            <tr>
+                <th>Surveillance</th>
+                <td>{{ row.Surveillance_setting }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

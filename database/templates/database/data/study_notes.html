@@ -1,0 +1,25 @@
+<div class="rowdata">
+    <table>
+        <tbody>
+            {% if row.Limitations_identified %}
+            <tr>
+                <th>Limitations identified</th>
+                <td>
+                    {{ row.Limitations_identified }}
+                </td>
+            </tr>
+            {% endif %}
+            {% if row.Other_points %}
+            <tr>
+                <th>Other points</th>
+                <td>
+                    {{ row.Other_points }}
+                </td>
+            </tr>
+            {% endif %}
+            {% if not row.Limitations_identified and not row.Other_points %}
+            N/A
+            {% endif %}
+        </tbody>
+    </table>
+</div>

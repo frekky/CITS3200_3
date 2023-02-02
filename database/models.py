@@ -356,12 +356,6 @@ class Studies(MyModel):
         help_text = 'Classification into metropolitan, regional and remote areas based on the ARIA+ (Accessibility and Remoteness Index of Australia) system.'
     )
 
-    Method_limitations = models.BooleanField(
-        null = True,
-        blank = True,
-        help_text = 'This variable indicates whether method limitations were specified by the authors of the publication.'
-    )
-
     Limitations_identified = models.CharField(
         max_length = 1000,
         blank = True,
@@ -381,13 +375,6 @@ class Studies(MyModel):
 
     def get_export_id(self):
         return self.Unique_identifier or self.id
-
-    def get_flags(self):
-        return (
-            {'field': field, 'value': getattr(self, field.name)}
-            for field in self._meta.get_fields()
-            if isinstance(field, models.BooleanField)
-        )
 
     def __str__(self):
         return "%s (%s)" % (self.Paper_title, self.Year)

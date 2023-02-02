@@ -10,6 +10,7 @@ services:
     volumes:
       - etc_letsencrypt:/etc/letsencrypt
       - le_well_known:/well_known
+      - uploads:/app/uploads
     environment:
       - DB_HOST=db
       - DB_NAME=django

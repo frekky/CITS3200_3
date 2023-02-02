@@ -53,6 +53,10 @@ server {
         alias /app/djstatic;
     }
 
+    location /uploads {
+        alias /app/uploads;
+    }
+
     location /.well-known {
         root /well_known;
     }

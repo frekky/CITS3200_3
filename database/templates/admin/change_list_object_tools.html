@@ -13,7 +13,7 @@
   {% if request.user.is_superuser %}
   {% if cl.opts.model_name == 'studies' or cl.opts.model_name == 'results' or cl.opts.model_name == 'importsource' %}
   <li>
-    <a href="{% url 'import_data' %}" class="addlink">
+    <a href="{% url 'admin:import_data' %}" class="addlink">
       Import Methods/Results
     </a>
   </li>

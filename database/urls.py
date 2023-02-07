@@ -9,7 +9,7 @@ urlpatterns = [
     path('signup/', views.signupPage, name='signup'),
     path('login/', views.loginPage, name='login'),
     path('logout/', views.logoutUser, name='logout'),
-    path('import_data/', views.import_data, name='import_data'),
+    #path('import_data/', views.import_data, name='import_data'),
     
     # Activate email
 	path('activate/<uidb64>/<token>/', views.activate, name='activate'),

@@ -172,3 +172,17 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 .model-studies.change-list #result_list .field-get_method_html th {
     width: 11em;
 }
+
+.action-checkbox {
+    position: relative;
+    padding: 0;
+}
+
+.rowheader {
+    position: absolute;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+}

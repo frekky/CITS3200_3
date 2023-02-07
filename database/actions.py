@@ -30,7 +30,7 @@ def prep_field(obj, field):
 
 
 @singledispatch
-def download_as_csv(modeladmin, request, queryset):
+def download_as_csv(modeladmin, request, queryset, fields=None, exclude=None, header=None, verbose_names=None, filename=None):
     """
     Generic csv export admin action.
 
@@ -47,10 +47,10 @@ def download_as_csv(modeladmin, request, queryset):
             ],
             download_as_csv_header = True
     """
-    fields = getattr(modeladmin, 'download_as_csv_fields', None)
-    exclude = getattr(modeladmin, 'download_as_csv_exclude', None)
-    header = getattr(modeladmin, 'download_as_csv_header', True)
-    verbose_names = getattr(modeladmin, 'download_as_csv_verbose_names', True)
+    fields = getattr(modeladmin, 'download_as_csv_fields', None) if fields is None else fields
+    exclude = getattr(modeladmin, 'download_as_csv_exclude', None) if exclude is None else exclude
+    header = getattr(modeladmin, 'download_as_csv_header', True) if header is None else header
+    verbose_names = getattr(modeladmin, 'download_as_csv_verbose_names', True) if verbose_names is None else verbose_names
 
     opts = modeladmin.model._meta
 
@@ -72,8 +72,18 @@ def download_as_csv(modeladmin, request, queryset):
                 field_names[spec[0]] = spec[1]
             else:
                 try:
-                    f = opts.get_field(spec)
-                except FieldDoesNotExist:
+                    if '__' in spec:
+                        myopts = opts
+                        bits = spec.split('__')
+                        for bit in bits:
+                            f = myopts.get_field(bit)
+                            if f.is_relation:
+                                myopts = myopts.get_field(bit).related_model._meta
+                            else:
+                                break
+                    else:
+                        f = opts.get_field(spec)
+                except (FieldDoesNotExist, AttributeError):
                     field_names[spec] = spec
                 else:
                     field_names[spec] = fname(f)
@@ -84,7 +94,7 @@ def download_as_csv(modeladmin, request, queryset):
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=%s.csv' % (
-            str(opts).replace('.', '_')
+            str(opts).replace('.', '_') if filename is None else filename
         )
 
     writer = csv.writer(response)
@@ -100,7 +110,7 @@ download_as_csv.short_description = "Download selected objects as CSV file"
 
 
 @download_as_csv.register(str)
-def _(description):
+def _(description, fields=None, exclude=None, header=None, verbose_names=None):
     """
     (overridden dispatcher)
     Factory function for making a action with custom description.
@@ -120,6 +130,6 @@ def _(description):
     """
     @wraps(download_as_csv)
     def wrapped_action(modeladmin, request, queryset):
-        return download_as_csv(modeladmin, request, queryset)
+        return download_as_csv(modeladmin, request, queryset, fields=fields, exclude=exclude, header=header, verbose_names=verbose_names)
     wrapped_action.short_description = description
     return wrapped_action

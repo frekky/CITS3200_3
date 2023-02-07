@@ -27,7 +27,7 @@
 {% endif %}
 
 {% block content %}
-<form enctype="multipart/form-data" action="{% url 'import_data' %}" method="post">
+<form enctype="multipart/form-data" action="" method="post">
     {% csrf_token %}
     <div class="mx-3">
 
@@ -107,6 +107,12 @@
                 </tr>
             </thead>
             <tbody>
+                <tr>
+                    <th>Results_ID</th>
+                    <td>N/A</td>
+                    <td>Link to Studies</td>
+                    <td>Unique Identifier of the original study where the results were published. Must be an exact match of some existing study Unique_identifier.</td>
+                </tr>
                 {% for f in results_fields %}
                 <tr>
                     <th>{{ f.djfield.name }}</th>

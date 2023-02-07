@@ -1,4 +1,4 @@
-<div class="rowdata d-flex">
+<div class="rowdata">
     <table>
         <tbody>
             <tr>
@@ -19,13 +19,4 @@
             </tr>
         </tbody>
     </table>
-    {% if user.is_staff or user.is_superuser %}
-    <div class="text-end align-self-center">
-        <a class="mx-1" href="{% url 'admin:database_results_change' row.id %}" title="Edit Result">
-            <span class="material-icons">
-                edit
-            </span>
-        </a>
-    </div>
-    {% endif %}
 </div>

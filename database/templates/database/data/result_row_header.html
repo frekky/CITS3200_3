@@ -1,0 +1,23 @@
+<div class="rowheader d-flex flex-column justify-content-start">
+    <label for="action-toggle-{{ row.pk }}" class="p-2 mb-1">
+        <input type="checkbox" class="action-select" name="{{ ACTION_CHECKBOX_NAME }}" id="action-toggle-{{ row.pk }}" value="{{ row.pk }}">
+    </label>
+    {% if user.is_staff or user.is_superuser %}
+    <a class="mb-2 mx-1" href="{% url 'admin:database_results_change' row.id %}" title="Edit Result">
+        <span class="material-icons">
+            edit
+        </span>
+    </a>
+    {% else %}
+    <a class="mb-2 mx-1" href="{% url 'admin:database_results_change' row.id %}" title="View Result">
+        <span class="material-icons">
+            visibility
+        </span>
+    </a>
+    {% endif %}
+    <a class="mb-2 mx-1" href="{% url 'admin:database_studies_changelist' %}?pk={{ row.Study_id }}" title="View Study Details">
+        <span class="material-icons">
+            find_in_page
+        </span>
+    </a>
+</div>

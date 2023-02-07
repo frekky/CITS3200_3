@@ -13,9 +13,8 @@ from django.core.mail import EmailMessage
 
 from django.contrib import messages #import for login messages
 
-# Create your views here.
 from database.models import * 
-from database.forms import CreateUserForm, AccountUpdateForm, StudiesForm, ImportDataForm #createrform imported from forms.py
+from database.forms import CreateUserForm, AccountUpdateForm, StudiesForm #createrform imported from forms.py
 
 # Prevent usage of browser back button
 from django.views.decorators.cache import cache_control
@@ -29,9 +28,6 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db.models.query_utils import Q
 from django.contrib.auth.tokens import default_token_generator
-
-from database.importer import import_csv_file, import_csv_results_row, import_csv_studies_row, get_field_descriptions
-import io
 
 def home(request):
 	return render(request, 'database/home.html')
@@ -221,68 +217,3 @@ def password_reset_request(request):
 		'password_form': password_form
 	}
 	return render(request, 'database/password/password_reset.html', context)
-
-def superuser_required(user):
-	return user.is_superuser
-
-@login_required(login_url='login')
-@user_passes_test(superuser_required)
-def import_data(request):
-	form = ImportDataForm()
-	res = None
-
-	if request.method == 'POST':
-		form = ImportDataForm(request.POST, request.FILES)
-		if form.is_valid():
-
-			# import data
-			study_src = ImportSource(
-				Source_file = form.cleaned_data['studies_file'],
-				Original_filename = form.cleaned_data['studies_file'].name,
-				Import_type = 'studies',
-				Imported_by = request.user,
-			)
-
-			result_src = ImportSource(
-				Source_file = form.cleaned_data['results_file'],
-				Original_filename = form.cleaned_data['results_file'].name,
-				Import_type = 'results',
-				Imported_by = request.user,
-			)
-
-			with transaction.atomic():
-				# clear old data
-				ImportSource.objects.all().delete()
-
-				# create & save studies
-				studies_ok, studies = import_csv_file(study_src, import_csv_studies_row)
-				for inst in studies:
-					inst.save()
-
-				# create & save results
-				if studies_ok:
-					results_ok, results = import_csv_file(result_src, import_csv_results_row)
-					for inst in results:
-						inst.save()
-				else:
-					results_ok = False
-					result_src.Import_log += 'Studies required to import results'
-					result_src.save()
-				
-				res = [
-					{
-					 	'title': ('Studies/methods imported successfully (%d rows)' % study_src.Row_count) if studies_ok else 'Error importing studies',
-					 	'items': study_src.Import_log.strip().split('\n'),
-					},
-					{
-						'title': ('Results imported successfully (%d rows)' % result_src.Row_count) if results_ok else 'Error importing results',
-						'items': result_src.Import_log.strip().split('\n'),
-					}
-				]
-
-	return render(request, 'database/import_data.html', context={
-		'form': form,
-		'results': res,
-		'studies_fields': get_field_descriptions(Studies),
-		'results_fields': get_field_descriptions(Results),
-	})

@@ -37,6 +37,9 @@ def format_bool_charfield(value):
 def get_field_descriptions(model):
     fdesc = []
     for field in model._meta.get_fields():
+        if field.name in ('Created_time', 'Updated_time', 'Approved_time', 'Created_by', 'Approved_by'):
+            continue
+
         if isinstance(field, fields.reverse_related.ManyToOneRel):
             continue
         if isinstance(field, fields.related.ForeignKey):
@@ -70,12 +73,21 @@ def parse_django_field_value(model, field, value):
 
         if isinstance(djfield, fields.CharField):
             if djfield.choices:
-                if value.lower() in NULL_VALUES and djfield.null:
-                    return None, True
+                lower = value.lower().strip()
                 for c in djfield.choices:
-                    if value.lower() == c[1].lower() or value.lower() == c[0].lower():
+                    if lower == c[1].lower().strip() or lower == c[0].lower().strip():
                         return (c[0], True)
+                if lower in NULL_VALUES:
+                    if djfield.null:
+                        return None, True
+                    else:
+                        return 'missing', False
                 return ('"%s" is not an allowed option' % (value), False)
+            if value.lower().strip() in NULL_VALUES:
+                if djfield.null:
+                    return None, True
+                else:
+                    return 'missing', False
             if len(value) >= djfield.max_length:
                 return ('"%s" is too long (max length %d)' % (
                     value, djfield.max_length
@@ -126,11 +138,12 @@ def import_csv_file(import_source, for_each_row):
     for csv_row in csv_reader:
         row_num += 1
         instance, msg = for_each_row(csv_row, import_source)
+        id = csv_row.get('Unique_identifier') or csv_row.get('Results_ID') or ''
         if not instance:
-            log += 'Row %d: Error: %s\n' % (row_num, msg)
+            log += 'Row %d (%s): Error: %s\n' % (row_num, id, msg)
             okay = False
         elif msg:
-            log += 'Row %d: Warning: %s\n' % (row_num, msg)
+            log += 'Row %d (%s): Warning: %s\n' % (row_num, id, msg)
         
         if instance:
             instances.append(instance)

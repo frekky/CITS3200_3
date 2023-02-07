@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .admin_views import import_data
 
 class StrepAAdminSite(admin.AdminSite):
 	site_header = 'Strep A Database'
@@ -7,6 +8,7 @@ class StrepAAdminSite(admin.AdminSite):
 
 	login_template = 'database/login.html'
 	enable_nav_sidebar = False
+	final_catch_all_view = False # actually we add this in below, see get_urls()
 
 	def has_permission(self, request):
 		# all users have implicit permission to access the admin site (because it is not just for admins)
@@ -42,5 +44,15 @@ class StrepAAdminSite(admin.AdminSite):
 			**(extra_context or {}),
 		}
 		return super().app_index(request, app_label, extra_context)
+
+	def get_urls(self):
+		from django.urls import path, re_path
+		urls = super().get_urls()
+		urls += [
+			path('import/', self.admin_view(import_data), name='import_data'),
+			re_path(r"(?P<url>.*)$", self.admin_view(self.catch_all_view)),
+		]
+		return urls
+
 
 admin_site = StrepAAdminSite()

@@ -190,6 +190,7 @@ a.icon-label {
 #login-icon {
     border-top-left-radius: 17px;
     border-bottom-left-radius: 17px;
+    height: 100%;
 }
 
 #login-title {

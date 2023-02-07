@@ -77,6 +77,18 @@ class ImportSource(models.Model):
     Imported_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True)
     Import_log = models.TextField(blank=True)
     Import_status = models.BooleanField(null=True, blank=True)
+
+    def __str__(self):
+        return self.Original_filename
+
+class FilteredManager(models.Manager):
+    filter_args = None
+    def __init__(self, filter_args=None):
+        self.filter_args = filter_args or {}
+        super().__init__()
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(**self.filter_args)
      
 class MyModel(models.Model):
     class Meta:
@@ -88,6 +100,8 @@ class MyModel(models.Model):
     Updated_time = models.DateTimeField(auto_now=True)
     Approved_time = models.DateTimeField(null=True, blank=True)
     Approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Verified by user', related_name='+')
+
+    objects = FilteredManager(filter_args={'Approved_by__isnull': False})
 
     @property
     def Created_by_name(self):
@@ -157,7 +171,7 @@ class Studies(MyModel):
 
     DISEASE_TYPES = [
         (x, x) for x in (
-            'AGN',
+            'APSGN',
             'ARF',
             'iStrep A - NF',
             'iStrep A - Scarlet fever',
@@ -286,6 +300,7 @@ class Studies(MyModel):
     Data_source_name = models.CharField(
         max_length = 200,
         blank = True,
+        null = True,
         verbose_name = 'Name of data source',
         help_text = 'Name of the dataset, project, consortium or specific disease register (if applicable).'
     )
@@ -356,15 +371,23 @@ class Studies(MyModel):
         help_text = 'Classification into metropolitan, regional and remote areas based on the ARIA+ (Accessibility and Remoteness Index of Australia) system.'
     )
 
+    Focus_of_study = models.CharField(
+        max_length = 1000,
+        blank = True,
+        help_text = 'Brief description of the focus of the study.'
+    )
+
     Limitations_identified = models.CharField(
         max_length = 1000,
         blank = True,
-        help_text = 'Summary of any limitations identified by authors of the publication.'
+        null = True,
+        help_text = 'Brief summary of any limitations identified by authors of the publication. (Optional)'
     )
 
     Other_points = models.TextField(
         blank = True,
-        help_text = 'This variable captures any other relevant notes relating to the study that may impact the interpretation of Strep A burden estimates.'
+        null = True,
+        help_text = 'This variable captures any other relevant notes relating to the study that may impact the interpretation of Strep A burden estimates. (Optional)'
     )
 
     def get_study_design(self):
@@ -383,7 +406,7 @@ class Studies(MyModel):
 class Results(MyModel):
     class Meta:
         verbose_name = 'Result'
-        verbose_name_plural = 'Results' 
+        verbose_name_plural = 'Results'
     
     Study = models.ForeignKey(
         Studies,
@@ -494,6 +517,7 @@ class Results(MyModel):
     Specific_location = models.CharField(
         max_length = 100,
         blank = True,
+        null = True,
         verbose_name = 'Specific geographic locations',
         help_text = 'Point estimates stratified by specific geographic locations (where reported), for example: Kimberley, Far North Queensland or Central Australia.'
     )
@@ -518,7 +542,7 @@ class Results(MyModel):
         max_digits = 10,
         null = True,
         blank = True,
-        verbose_name = 'Observational period',
+        verbose_name = 'Observational time (years)',
         help_text = 'Total observation time used by the study for generating the point estimate.'
     )
     
@@ -580,12 +604,6 @@ class Results(MyModel):
         help_text = 'Indicator variable which is “Yes” if point estimate is a proportion which is Strep.A-specific and therefore represents a Strep.A-attributable fraction and “No” or “Unknown” otherwise.'
     )
 
-    #Burden_measure = models.CharField(
-    #    max_length = 50,
-    #    blank = True,
-    #    help_text = 'The epidemiological measure presented as a point estimate by the study. The categories include: population incidence, population prevalence or proportion (not population based).'
-    #)
-
     Hospitalised_flag = models.BooleanField(
         null = True,
         blank = True,
@@ -643,19 +661,10 @@ class Results(MyModel):
             return "Burden: %s" % (self.Point_estimate, )
         return '%s (Burden: %s)' % (self.Study.Paper_title, self.Point_estimate)
 
-class ProxyManager(models.Manager):
-    filter_args = None
-    def __init__(self, filter_args=None):
-        self.filter_args = filter_args or {}
-        super().__init__()
-    
-    def get_queryset(self):
-        return super().get_queryset().filter(**self.filter_args)
-
 proxies = []
-def proxy_model_factory(model, verbose_name, **filter_args):
+def proxy_model_factory(model, verbose_name, name=None, **filter_args):
     global proxies
-    name = '_'.join('%s.%s' % (k.replace('_', ''), v) for k, v in filter_args.items()) + '_' + model._meta.model_name
+    name = name or ('_'.join('%s.%s' % (k.replace('_', ''), v) for k, v in filter_args.items()) + '_' + model._meta.model_name)
 
     meta = type('Meta', (), {
         'proxy': True,
@@ -666,33 +675,16 @@ def proxy_model_factory(model, verbose_name, **filter_args):
     cls = type(name, (model, ), {
         '__module__': __name__,
         'Meta': meta,
-        'objects': ProxyManager(filter_args=filter_args),
+        'objects': FilteredManager(filter_args=filter_args),
     })
 
     proxies.append(cls)
 
     return cls
 
-is_approved_proxies = []
-def is_approved_proxy_model_factory(model, verbose_name, **filter_args):
-    global is_approved_proxies
-    name = '_'.join('%s_%s' % (k.replace('_', ''), v) for k, v in filter_args.items()) + '_' + model._meta.model_name
 
-    meta = type('Meta', (), {
-        'proxy': True,
-        'verbose_name': verbose_name,
-        'verbose_name_plural': verbose_name,
-    })
+UnapprovedStudies = proxy_model_factory(Studies, 'Studies (Pending Approval)', name='studies_pending', Approved_by__isnull=True)
+UnapprovedResults = proxy_model_factory(Results, 'Results (Pending Approval)', name='results_pending', Approved_by__isnull=True)
 
-    cls = type(name, (model, ), {
-        '__module__': __name__,
-        'Meta': meta,
-        'objects': ProxyManager(filter_args=filter_args),
-    })
-
-    is_approved_proxies.append(cls)
-
-    return cls
-
-UnapprovedStudies = is_approved_proxy_model_factory(Studies, 'Studies (Pending Approval)', Approved_by__isnull=True)
-UnapprovedResults = is_approved_proxy_model_factory(Results, 'Results (Pending Approval)', Approved_by__isnull=True)
+#AllStudies = proxy_model_factory(Studies, 'Studies', name='studies', Approved_by__isnull=False)
+#AllResults = proxy_model_factory(Results, 'Results', name='results', Approved_by__isnull=False)

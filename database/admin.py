@@ -1,14 +1,17 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.contrib.admin.utils import quote, unquote
+from django.http import HttpResponseRedirect
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
+from django.utils.http import urlencode
 from django.template.loader import render_to_string
 from django.urls import reverse
 from rangefilter.filters import NumericRangeFilter
 from admin_action_buttons.admin import ActionButtonsMixin
 
-from database.models import Users, Studies, Results, ImportSource, proxies, is_approved_proxies # Custom admin form imported from models.py
+from database.models import Users, Studies, Results, ImportSource, proxies # Custom admin form imported from models.py
 from .actions import download_as_csv
 from django_admin_listfilter_dropdown.filters import (DropdownFilter, ChoiceDropdownFilter, RelatedDropdownFilter)
 from django.db import models
@@ -43,6 +46,8 @@ class ImportAdmin(ActionButtonsMixin, ModelAdmin):
 
 # override default behaviour to allow viewing by anyone
 class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
+    checkbox_template = None
+
     def has_view_permission(self, request, obj=None):
         return request.user.is_active #and request.user.can_view_data
 
@@ -51,44 +56,32 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        return qs.filter(Approved_by__isnull=False)
+        # Store request hack: from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
+        self.request = request
+
+        #return qs.filter(Approved_by__isnull=False) # this is overridden in the unapproved proxy admins
+        return qs
            
     # save email of user that's adding studies/results
     def save_model(self, request, obj, form, change):
-        obj.added_by = request.user
+        if obj.pk is None:
+            obj.Created_by = request.user
+        
         super().save_model(request, obj, form, change)
-    
-    # exclude fields so they're not viewable by generic users
-    def get_exclude(self, request, obj=None):
-            is_superuser = request.user.is_superuser
-            excluded = ['added_by']
-            if not is_superuser:
-                return excluded
 
-class ResultsInline(admin.StackedInline):
-    model = Results
-    extra = 0
-    
-    def get_readonly_fields(self, request, obj=None):
-            is_superuser = request.user.is_superuser
-            if is_superuser:
-                return []
-            return self.readonly_fields
-    
-    def has_view_permission(self, request, obj=None):
-        return True #and request.user.can_add_data
-    
-    def has_add_permission(self, request, obj=None):
-        return True #and request.user.can_add_data
-    
-    # exclude fields so they're not viewable by generic users    
-    def get_exclude(self, request, obj=None):
-            is_superuser = request.user.is_superuser
-            excluded = ['Approved_by', 'Created_by']
-            if not is_superuser:
-                return excluded
+    @admin.display(description=mark_safe('<input type="checkbox" id="action-toggle">'))
+    def action_checkbox(self, obj):
+        """
+        A list_display column containing a checkbox widget.
+        """
+        if self.checkbox_template is None:
+            return super().action_checkbox(obj)
+
+        return render_to_string(self.checkbox_template, context={
+            'ACTION_CHECKBOX_NAME': admin.helpers.ACTION_CHECKBOX_NAME,
+            'row': obj,
+            'user': self.request.user,
+        })
    
 class StudiesAdmin(ViewModelAdmin):
     #inlines = [ResultsInline]
@@ -117,47 +110,15 @@ class StudiesAdmin(ViewModelAdmin):
         ('Aria_remote', ChoiceDropdownFilter),
     )
 
+    checkbox_template = 'database/data/study_row_header.html'
+
     ordering = ('Paper_title', 'Study_group')
 
     search_fields = ('Paper_title', 'Paper_link', 'Study_description', 'Data_source_name', 'Specific_region', 'Method_limitations', 'Other_points')
 
-    actions = [download_as_csv('Export selected Studies to CSV')]
+    actions = ['view_child_results', 'export_csv', 'export_backup_csv', 'delete_selected']
 
-    search_help_text = 'Search Titles, Study Descriptions, Data Source, Specific Geographic Location, Method Limitations, or Other Points for matching keywords. Put quotes around search terms to find exact phrases only.'
-
-    download_as_csv_verbose_names = False
-    download_as_csv_fields = [
-        ('get_export_id', 'Unique_identifier'),
-        'Study_group',
-        'Paper_title',
-        'Paper_link',
-        'Year',
-        'Disease',
-        'Study_design',
-        'Study_description',
-        'Diagnosis_method',
-        'Data_source',
-        'Surveillance_setting',
-        'Data_source_name',
-        'Clinical_definition_category',
-        'Coverage',
-        'Climate',
-        'Aria_remote',
-        'Method_limitations',
-        'Limitations_identified',
-        'Other_points',
-        'Created_time',
-        'Created_by_name',
-        'Updated_time',
-        'Approved_time',
-        'Approved_by_name',
-    ]
-
-    def get_readonly_fields(self, request, obj=None):
-        is_superuser = request.user.is_superuser
-        if is_superuser:
-            return []
-        return self.readonly_fields
+    search_help_text = 'Search titles, study descriptions, data source names, location, or Other Points for matching keywords. Put quotes around search terms to find exact phrases only.'
 
     @admin.display(ordering='Study_description', description='Study Details')
     def get_publication_html(self, obj):
@@ -175,14 +136,75 @@ class StudiesAdmin(ViewModelAdmin):
     def get_notes_html(self, obj):
         return render_to_string('database/data/study_notes.html', context={'row': obj})
 
-    # save email of user that's adding studies inline
-    def save_formset(self, request, obj, formset, change):
-        instances = formset.save(commit=False)
-        for instance in instances:
-            instance.added_by = request.user
-            instance.save()
-            formset.save()
+    @admin.action(description='Goto Results for Selected')
+    def view_child_results(self, request, queryset):
+        study_ids = set()
+        for obj in queryset:
+            study_ids.add(obj.pk)
 
+        return HttpResponseRedirect(
+            reverse('admin:database_results_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_ids)
+        )
+
+    @admin.action(description='Export Selected to CSV')
+    def export_csv(self, request, queryset):
+        return download_as_csv(self, request, queryset,
+            fields = [
+                'Study_group',
+                'Paper_title',
+                'Paper_link',
+                'Year',
+                'Study_description',
+                'Disease',
+                'Study_design',
+                'Diagnosis_method',
+                'Data_source',
+                'Data_source_name',
+                'Surveillance_setting',
+                'Clinical_definition_category',
+                'Coverage',
+                'Climate',
+                'Aria_remote',
+                'Limitations_identified',
+                'Other_points',
+                'Created_by_name',
+                'Approved_by_name',
+            ],
+            verbose_names = True,
+            filename = 'StrepA-Methods-export',
+        )
+
+    @admin.action(description='Admin: Backup Selected to Methods CSV', permissions=['change'])
+    def export_backup_csv(self, request, queryset):
+        return download_as_csv(self, request, queryset,
+            fields = [
+                ('get_export_id', 'Unique_identifier'),
+                'Study_group',
+                'Paper_title',
+                'Paper_link',
+                'Year',
+                'Study_description',
+                'Disease',
+                'Study_design',
+                'Diagnosis_method',
+                'Data_source',
+                'Data_source_name',
+                'Surveillance_setting',
+                'Clinical_definition_category',
+                'Coverage',
+                'Climate',
+                'Aria_remote',
+                'Limitations_identified',
+                'Other_points',
+                'Created_time',
+                'Created_by_name',
+                'Updated_time',
+                'Approved_time',
+                'Approved_by_name',
+            ],
+            verbose_names = False,
+            filename = 'StrepA-Methods-Backup'
+        )
 
 class ResultsAdmin(ViewModelAdmin):
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
@@ -224,49 +246,14 @@ class ResultsAdmin(ViewModelAdmin):
         ('StrepA_attributable_fraction', DropdownFilter), # single select
     )
 
-    download_as_csv_verbose_names = False
-    download_as_csv_fields = [
-        ('Study__get_export_id', 'Results_ID'),
-        'Age_general',
-        'Age_min',
-        'Age_max',
-        'Age_specific',
-        'Population_gender',
-        'Indigenous_status',
-        'Indigenous_population',
-        'Country',
-        'Jurisdiction',
-        'Specific_location',
-        'Year_start',
-        'Year_stop',
-        'Observation_time_years',
-        'Numerator',
-        'Denominator',
-        'Point_estimate',
-        'Measure',
-        'Interpolated_from_graph',
-        'Proportion',
-        'Mortality_flag',
-        'Recurrent_ARF_flag',
-        'StrepA_attributable_fraction',
-        'Created_time',
-        'Created_by_name',
-        'Updated_time',
-        'Approved_time',
-        'Approved_by_name',
-    ]
+    actions = ['view_parent_studies', 'export_merged_csv', 'export_backup_csv', 'delete_selected']
 
     ordering = ('-Study__Study_group', )    
-    actions = [download_as_csv('Export selected results to CSV')]
 
     search_fields = ('Study__Paper_title', 'Measure', 'Specific_location')
     search_help_text = 'Search Study Titles, Measure, and Specific Location for matching keywords. Put quotes around search terms to find exact phrases only.'
 
-    # from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        self.request = request
-        return qs
+    checkbox_template = 'database/data/result_row_header.html'
 
     ## For the sake of sensible people make sure the ordering matches the FIRST item that appears in each cell ##
 
@@ -292,13 +279,107 @@ class ResultsAdmin(ViewModelAdmin):
 
     @admin.display(description='Point Estimate')
     def get_point_estimate_html(self, obj):
-        return render_to_string('database/data/result_point_estimate.html', context={'row': obj, 'user': self.request.user})
+        return render_to_string('database/data/result_point_estimate.html', context={'row': obj})
+    
+    @admin.action(description='Goto Studies for Selection')
+    def view_parent_studies(self, request, queryset):
+        study_ids = set()
+        for result in queryset:
+            study_ids.add(result.Study_id)
 
-    def get_readonly_fields(self, request, obj=None):
-            is_superuser = request.user.is_superuser
-            if is_superuser:
-                return []
-            return self.readonly_fields
+        return HttpResponseRedirect(
+            reverse('admin:database_studies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_ids)
+        )
+
+    @admin.action(description='Export Selected to CSV')
+    def export_merged_csv(self, request, queryset):
+        return download_as_csv(self, request, queryset,
+            fields = [
+                # Study fields
+                'Study__Study_group',
+                'Study__Paper_title',
+                'Study__Paper_link',
+                'Study__Year',
+                'Study__Study_description',
+                'Study__Disease',
+                'Study__Study_design',
+                'Study__Diagnosis_method',
+                'Study__Data_source',
+                'Study__Data_source_name',
+                'Study__Surveillance_setting',
+                'Study__Clinical_definition_category',
+                'Study__Coverage',
+                'Study__Climate',
+                'Study__Aria_remote',
+                'Study__Limitations_identified',
+                'Study__Other_points',
+
+                # Result fields
+                'Age_general',
+                'Age_min',
+                'Age_max',
+                'Age_specific',
+                'Population_gender',
+                'Indigenous_status',
+                'Indigenous_population',
+                'Country',
+                'Jurisdiction',
+                'Specific_location',
+                'Year_start',
+                'Year_stop',
+                'Observation_time_years',
+                'Numerator',
+                'Denominator',
+                'Point_estimate',
+                'Measure',
+                'Interpolated_from_graph',
+                'Proportion',
+                'Mortality_flag',
+                'Recurrent_ARF_flag',
+                'StrepA_attributable_fraction',
+                'Created_by_name',
+                'Approved_by_name',
+            ],
+            verbose_names = True,
+            filename = 'StrepA-Methods-Results-export-merged'
+        )
+
+    @admin.action(description='Admin: Backup Selected to Results CSV', permissions=['change'])
+    def export_backup_csv(self, request, queryset):
+        return download_as_csv(self, request, queryset,
+            fields = [
+                ('Study__get_export_id', 'Results_ID'),
+                'Age_general',
+                'Age_min',
+                'Age_max',
+                'Age_specific',
+                'Population_gender',
+                'Indigenous_status',
+                'Indigenous_population',
+                'Country',
+                'Jurisdiction',
+                'Specific_location',
+                'Year_start',
+                'Year_stop',
+                'Observation_time_years',
+                'Numerator',
+                'Denominator',
+                'Point_estimate',
+                'Measure',
+                'Interpolated_from_graph',
+                'Proportion',
+                'Mortality_flag',
+                'Recurrent_ARF_flag',
+                'StrepA_attributable_fraction',
+                'Created_time',
+                'Created_by_name',
+                'Updated_time',
+                'Approved_time',
+                'Approved_by_name',
+            ],
+            verbose_names = False,
+            filename = 'StrepA-Results-Backup',
+        )
 
 from database.admin_site import admin_site # Custom admin site
 
@@ -307,7 +388,7 @@ admin_site.register(Studies, StudiesAdmin)
 admin_site.register(Results, ResultsAdmin)
 admin_site.unregister(Group)
 
-def get_proxy_admin(model, base_admin):
+def get_proxy_admin(model, base_admin, can_add=True, staff_only=False):
     """ create generic admin pages for different results/study groups """
     class AnythingProxyAdmin(base_admin):
         list_display = [
@@ -316,11 +397,14 @@ def get_proxy_admin(model, base_admin):
         list_filter = [
             x for x in base_admin.list_filter if x not in {'Study__Study_group', 'Study_group'}
         ]
+
+        def has_module_permission(self, request):
+            if staff_only and not request.user.is_superuser:
+                return False
+            return True
         
         def has_add_permission(self, request):
-            # don't confuse users by letting them add "specific group" results/studies,
-            # since the proxy admin doesn't actually constrain which group the result belongs to.
-            return False
+            return can_add
 
     return AnythingProxyAdmin
 
@@ -330,34 +414,3 @@ def register_proxy_admins():
         admin_site.register(p, model_admin)
 
 register_proxy_admins()
-
-# Proxy models for data not approved - viewable by superusers only
-def get_proxy_is_approved_admin(model, base_admin):
-    """ create generic admin pages for different results/study groups """
-    class UnapprovedProxyAdmin(base_admin):
-        list_display = [
-            x for x in base_admin.list_display if x not in {'get_study_group', 'Study_group'}
-        ]
-        list_filter = [
-            x for x in base_admin.list_filter if x not in {'Study__Study_group', 'Study_group'}
-        ]
-        
-        # don't confuse users by letting them add "specific group" results/studies,
-        # since the proxy admin doesn't actually constrain which group the result belongs to.
-        def has_module_permission(self, request):
-            if not request.user.is_superuser:
-                return False
-            return True
-        
-        def has_add_permission(self, request):
-            return False
-            
-    return UnapprovedProxyAdmin
-
-def register_proxy_is_approved_admins():
-    for p in is_approved_proxies:
-        model_admin = get_proxy_is_approved_admin(p, ResultsAdmin if issubclass(p, Results) else StudiesAdmin)
-        
-        admin_site.register(p, model_admin)
-
-register_proxy_is_approved_admins()

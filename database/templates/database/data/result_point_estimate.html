@@ -11,11 +11,11 @@
             </tr>
             <tr>
                 <th>Numerator</th>
-                <td>{{ row.Numerator }}</td>
+                <td>{% if row.Numerator is not None %}{{ row.Numerator }}{% else %}Not reported{% endif %}</td>
             </tr>
             <tr>
                 <th>Denominator</th>
-                <td>{{ row.Denominator }}</td>
+                <td>{% if row.Denominator is not None %}{{ row.Denominator }}{% else %}Not reported{% endif %}</td>
             </tr>
         </tbody>
     </table>

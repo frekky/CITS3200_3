@@ -96,6 +96,7 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 
 .rowdata th {
     font-weight: lighter;
+    color: grey;
 }
 
 .rowdata th, .rowdata td {

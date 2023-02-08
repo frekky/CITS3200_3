@@ -1,6 +1,14 @@
 <div class="rowdata">
     <table>
         <tbody>
+            {% if row.Focus_of_study %}
+            <tr>
+                <th>Focus of study</th>
+                <td>
+                    {{ row.Focus_of_study }}
+                </td>
+            </tr>
+            {% endif %}
             {% if row.Limitations_identified %}
             <tr>
                 <th>Limitations identified</th>

@@ -16,17 +16,24 @@
             <tr>
                 <th>Ages</th>
                 <td>
-                    {{ row.Age_specific }}<br>
+                    {{ row.Age_specific }}
+                    {% if row.exact_age_text is not None %}
+                    <br>
                     <i>{{ row.exact_age_text }}</i>
+                    {% endif %}
                 </td>
             </tr>
             <tr>
                 <th>Obsv. Time</th>
                 <td>
+                    {% if row.Year_start is None and row.Year_stop is None and row.Observation_time_years is None %}
+                    Not reported
+                    {% else %}
                     {% if row.Year_start == row.Year_stop %}
                     Year {{ row.Year_start }} - {{ row.observation_time_text }}
                     {% else %}
                     {{ row.Year_start }} to {{ row.Year_stop }} ({{ row.observation_time_text }})
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>

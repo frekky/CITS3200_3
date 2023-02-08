@@ -4,9 +4,8 @@
             <tr>
                 <th>Location</th>
                 <td>
-                    {{ row.Specific_location }}
-                    <br>
-                    <i>{{ row.Jurisdiction }}, {{ row.Country }}</i>
+                    {% if row.Specific_location %}{{ row.Specific_location }}<br>{% endif %}
+                    <i>{% if row.Jurisdiction %}{{ row.Jurisdiction }}, {% endif %}{{ row.Country }}</i>
                 </td>
             </tr>
             {% if row.Study %}

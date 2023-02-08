@@ -1,19 +1,19 @@
 {% autoescape off %}
 <h3>
-    Hi {{ user }},
+    Hi {{ user.first_name }},
 </h3>
 
 <p>
-    Please click on the link to confirm your registration:
+    Please click on the link to confirm your registration for the ASAVI online Strep A Research Literature database.
 </p>
 
-<b>
-    {{ protocol }}://{{ domain }}{% url 'activate' uidb64=uid token=token %}
-</b>
+<b><a href="{{ activate_url }}">{{ activate_url }}</a></b>
+
+<p>If you did not create an account with us then please disregard this email.</p>
 
 <p>
 Sincerely,
 <br>
-The CITS3200_3 Team
+ASAVI Strep A Database Team
 </p>
 {% endautoescape %}

@@ -3,21 +3,23 @@
         <input type="checkbox" class="action-select" name="{{ ACTION_CHECKBOX_NAME }}" id="action-toggle-{{ row.pk }}" value="{{ row.pk }}">
     </label>
     {% if user.is_staff or user.is_superuser %}
-    <a class="mb-2 mx-1" href="{% url 'admin:database_studies_change' row.id %}" title="View/Edit Study">
+    <a class="mb-2 mx-1" href="{{ row.change_url }}" title="View/Edit Study">
         <span class="material-icons">
             edit
         </span>
     </a>
     {% else %}
-    <a class="mb-2 mx-1" href="{% url 'admin:database_studies_change' row.id %}" title="View Study">
+    <a class="mb-2 mx-1" href="{{ row.change_url }}" title="View Study">
         <span class="material-icons">
             info
         </span>
     </a>
     {% endif %}
-    <a class="mb-2 mx-1" href="{% url 'admin:database_results_changelist' %}?Study_id={{ row.pk }}" title="View Results">
+    {% if row.view_study_results_url %}
+    <a class="mb-2 mx-1" href="{{ row.view_study_results_url }}" title="View Results">
         <span class="material-icons">
             view_list
         </span>
     </a>
+    {% endif %}
 </div>

@@ -9,7 +9,7 @@ def superuser_required(user):
 #@login_required(login_url='login')
 #@user_passes_test(superuser_required)
 def import_data(request):
-    from database.models import ImportSource, Studies, Results
+    from database.models import ImportSource, StudiesModel, ResultsModel
     from database.forms import ImportDataForm
     from database.importer import import_csv_file, import_csv_results_row, import_csv_studies_row, get_field_descriptions
     from .admin_site import admin_site
@@ -69,8 +69,8 @@ def import_data(request):
     return render(request, 'database/import_data.html', context={
         'form': form,
         'results': res,
-        'studies_fields': get_field_descriptions(Studies),
-        'results_fields': get_field_descriptions(Results),
+        'studies_fields': get_field_descriptions(StudiesModel),
+        'results_fields': get_field_descriptions(ResultsModel),
         'title': 'Import Methods/Results',
         **admin_site.each_context(request),
     })

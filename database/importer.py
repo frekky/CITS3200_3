@@ -5,7 +5,7 @@ import io
 from django.db import transaction
 from django.db.models import fields
 from django.core.exceptions import FieldDoesNotExist
-from database.models import Studies, Results
+from database.models import StudiesModel, ResultsModel
 import decimal
 
 logger = logging.getLogger(__name__)
@@ -156,7 +156,13 @@ def import_csv_file(import_source, for_each_row):
     return okay, instances
     
 def import_csv_studies_row(row, import_source):
-    study = Studies(Import_source=import_source, Approved_by=import_source.Imported_by, Approved_time=import_source.Import_time)
+    study = StudiesModel(
+        Import_source = import_source,
+        Created_by = import_source.Imported_by,
+        Approved_by = import_source.Imported_by,
+        Approved_time = import_source.Import_time
+    )
+
     field_errors = []
 
     for field, value in row.items():
@@ -165,7 +171,7 @@ def import_csv_studies_row(row, import_source):
         if field in ('Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
             continue
         
-        value, ok = parse_django_field_value(Studies, field, value)
+        value, ok = parse_django_field_value(StudiesModel, field, value)
         if not ok:
             field_errors.append('%s: %s' % (field, value))
         else:
@@ -174,7 +180,13 @@ def import_csv_studies_row(row, import_source):
     return study, (', '.join(field_errors) if len(field_errors) > 0 else None)
 
 def import_csv_results_row(row, import_source):
-    result = Results(Import_source=import_source, Approved_by=import_source.Imported_by, Approved_time=import_source.Import_time)
+    result = ResultsModel(
+        Import_source = import_source,
+        Created_by = import_source.Imported_by,
+        Approved_by = import_source.Imported_by,
+        Approved_time = import_source.Import_time
+    )
+
     field_errors = []
 
     for field, value in row.items():
@@ -183,7 +195,7 @@ def import_csv_results_row(row, import_source):
         if field in ('Results_ID', 'Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
             continue
         
-        value, ok = parse_django_field_value(Results, field, value)
+        value, ok = parse_django_field_value(ResultsModel, field, value)
         if not ok:
             field_errors.append("%s: %s" % (field, value))
         else:
@@ -192,11 +204,11 @@ def import_csv_results_row(row, import_source):
     # link to related study/methods row based on Unique_identifier = Results_ID
     if 'Results_ID' in row and (study_id := row['Results_ID']):
         # check Unique_identifier first
-        studies = list(Studies.objects.filter(Unique_identifier=study_id))
+        studies = list(StudiesModel.objects.filter(Unique_identifier=study_id))
         if len(studies) == 0 and study_id:
             try:
                 # nothing found: try searching by database ID instead (ie. for online-submitted studies/results)
-                studies = list(Studies.objects.filter(id=study_id))
+                studies = list(StudiesModel.objects.filter(id=study_id))
             except:
                 pass
 

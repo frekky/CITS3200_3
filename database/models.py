@@ -4,6 +4,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.validators import MaxValueValidator, MinValueValidator 
 from django.contrib import admin
 from django.conf import settings
+from django.urls import reverse
+from django.contrib.admin.utils import quote
+
 
 class CustomAccountManager(BaseUserManager):
     
@@ -104,6 +107,14 @@ class MyModel(models.Model):
     objects = FilteredManager(filter_args={'Approved_by__isnull': False})
 
     @property
+    def pending(self):
+        return self.Approved_by is None
+
+    @property
+    def change_url(self):
+        return reverse('admin:%s_%s_change' % (self._meta.app_label, self._meta.model_name), args=[self.id])
+
+    @property
     def Created_by_name(self):
         if self.Created_by:
             return str(self.Created_by)
@@ -117,8 +128,9 @@ class MyModel(models.Model):
         else:
             return 'N/A'
 
-class Studies(MyModel):
+class StudiesModel(MyModel):
     class Meta:
+        db_table = 'database_studies'
         verbose_name = 'Study'
         verbose_name_plural = 'Studies'
 
@@ -390,26 +402,31 @@ class Studies(MyModel):
         help_text = 'This variable captures any other relevant notes relating to the study that may impact the interpretation of Strep A burden estimates. (Optional)'
     )
 
-    def get_study_design(self):
-        for code, desc in self.STUDY_DESIGNS:
-            if code == self.Study_design:
-                return desc
-        return ''
-
     def get_export_id(self):
         return self.Unique_identifier or self.id
 
+    @classmethod
+    def get_view_study_results_url(cls, study_id_list):
+        if 'pending' in cls._meta.model_name:
+            return None
+        return reverse('admin:database_results_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_id_list)
+
+    @property
+    def view_study_results_url(self):
+        return self.get_view_study_results_url((self.pk, ))
+
     def __str__(self):
-        return "%s (%s)" % (self.Paper_title, self.Year)
+        return "%s%s (%s)" % ('[Pending Approval] ' if self.pending else '', self.Paper_title, self.Year)
 
 
-class Results(MyModel):
+class ResultsModel(MyModel):
     class Meta:
+        db_table = 'database_results'
         verbose_name = 'Result'
         verbose_name_plural = 'Results'
     
     Study = models.ForeignKey(
-        Studies,
+        StudiesModel,
         on_delete = models.CASCADE,
         help_text = "Select or add the study where these results were published.",
     )
@@ -653,17 +670,21 @@ class Results(MyModel):
         return '%d month%s' % (months, months_pl)
 
     @property
-    def change_url(self):
-        return reverse('admin:database_results_change', args=[self.id])
+    def view_results_studies_url(self):
+        return self.get_view_results_studies_url((self.Study_id, ))
+
+    @classmethod
+    def get_view_results_studies_url(cls, study_id_list):
+        if 'pending' in cls._meta.model_name:
+            return None
+        return reverse('admin:database_studies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_id_list)
 
     def __str__(self):
         if not self.Study:
-            return "Burden: %s" % (self.Point_estimate, )
-        return '%s (Burden: %s)' % (self.Study.Paper_title, self.Point_estimate)
+            return "%sBurden: %s" % ('[Pending Approval] ' if self.pending else '', self.Point_estimate, )
+        return '%s%s (Burden: %s)' % ('[Pending Approval] ' if self.pending else '', self.Study.Study_description if self.Study.Study_description else self.Study.Unique_identifier, self.Point_estimate)
 
-proxies = []
-def proxy_model_factory(model, verbose_name, name=None, **filter_args):
-    global proxies
+def proxy_model_factory(model, verbose_name, name=None, filter_args={}):
     name = name or ('_'.join('%s.%s' % (k.replace('_', ''), v) for k, v in filter_args.items()) + '_' + model._meta.model_name)
 
     meta = type('Meta', (), {
@@ -678,13 +699,32 @@ def proxy_model_factory(model, verbose_name, name=None, **filter_args):
         'objects': FilteredManager(filter_args=filter_args),
     })
 
-    proxies.append(cls)
-
     return cls
 
+ApprovedStudies = proxy_model_factory(
+    StudiesModel,
+    'Studies',
+    name = 'studies',
+    filter_args = {'Approved_by__isnull': False}
+)
 
-UnapprovedStudies = proxy_model_factory(Studies, 'Studies (Pending Approval)', name='studies_pending', Approved_by__isnull=True)
-UnapprovedResults = proxy_model_factory(Results, 'Results (Pending Approval)', name='results_pending', Approved_by__isnull=True)
+ApprovedResults = proxy_model_factory(
+    ResultsModel,
+    'Results',
+    name = 'results',
+    filter_args = {'Approved_by__isnull': False}
+)
 
-#AllStudies = proxy_model_factory(Studies, 'Studies', name='studies', Approved_by__isnull=False)
-#AllResults = proxy_model_factory(Results, 'Results', name='results', Approved_by__isnull=False)
+PendingStudies = proxy_model_factory(
+    StudiesModel,
+    'Studies (Pending Approval)',
+    name = 'studies_pending',
+    filter_args = {'Approved_by__isnull': True},
+)
+
+PendingResults = proxy_model_factory(
+    ResultsModel,
+    'Results (Pending Approval)',
+    name = 'results_pending',
+    filter_args = {'Approved_by__isnull': True},
+)

@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-from django.contrib.admin.utils import quote, unquote
 from django.http import HttpResponseRedirect
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
@@ -11,12 +10,23 @@ from django.urls import reverse
 from rangefilter.filters import NumericRangeFilter
 from admin_action_buttons.admin import ActionButtonsMixin
 
-from database.models import Users, Studies, Results, ImportSource, proxies # Custom admin form imported from models.py
+from database.models import (
+    Users, ApprovedStudies, ApprovedResults, 
+    PendingStudies, PendingResults,
+    ImportSource)
+
 from .actions import download_as_csv
-from django_admin_listfilter_dropdown.filters import (DropdownFilter, ChoiceDropdownFilter, RelatedDropdownFilter)
+from django_admin_listfilter_dropdown.filters import (
+    DropdownFilter, ChoiceDropdownFilter, RelatedDropdownFilter)
 from django.db import models
-        
+
+from database.admin_site import admin_site # Custom admin site
+
+# Hide the groups from the admin site
+admin_site.unregister(Group)
+
 # The Custom Admin user model
+@admin.register(Users)
 class AccountAdmin(ActionButtonsMixin, UserAdmin):
     list_display = ('email', 'first_name', 'last_name', 'date_joined', 'is_superuser', 'profession', 'institution', 'country')
     fields = ('email', 'first_name', 'last_name', 'date_joined', 'profession', 'institution', 'country', 'is_superuser', 'is_active')
@@ -58,8 +68,6 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
         qs = super().get_queryset(request)
         # Store request hack: from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
         self.request = request
-
-        #return qs.filter(Approved_by__isnull=False) # this is overridden in the unapproved proxy admins
         return qs
            
     # save email of user that's adding studies/results
@@ -81,9 +89,10 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
             'ACTION_CHECKBOX_NAME': admin.helpers.ACTION_CHECKBOX_NAME,
             'row': obj,
             'user': self.request.user,
+            'model_name': obj._meta.model_name,
         })
    
-class StudiesAdmin(ViewModelAdmin):
+class BaseStudiesAdmin(ViewModelAdmin):
     #inlines = [ResultsInline]
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
@@ -142,9 +151,7 @@ class StudiesAdmin(ViewModelAdmin):
         for obj in queryset:
             study_ids.add(obj.pk)
 
-        return HttpResponseRedirect(
-            reverse('admin:database_results_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_ids)
-        )
+        return HttpResponseRedirect(self.model.get_view_study_results_url(study_id_list))
 
     @admin.action(description='Export Selected to CSV')
     def export_csv(self, request, queryset):
@@ -206,7 +213,7 @@ class StudiesAdmin(ViewModelAdmin):
             filename = 'StrepA-Methods-Backup'
         )
 
-class ResultsAdmin(ViewModelAdmin):
+class BaseResultsAdmin(ViewModelAdmin):
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
     list_display = (
@@ -287,9 +294,7 @@ class ResultsAdmin(ViewModelAdmin):
         for result in queryset:
             study_ids.add(result.Study_id)
 
-        return HttpResponseRedirect(
-            reverse('admin:database_studies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_ids)
-        )
+        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_id_list))
 
     @admin.action(description='Export Selected to CSV')
     def export_merged_csv(self, request, queryset):
@@ -381,36 +386,19 @@ class ResultsAdmin(ViewModelAdmin):
             filename = 'StrepA-Results-Backup',
         )
 
-from database.admin_site import admin_site # Custom admin site
+@admin.register(ApprovedStudies)
+class ApprovedStudiesAdmin(BaseStudiesAdmin):
+    pass
 
-admin_site.register(Users, AccountAdmin)
-admin_site.register(Studies, StudiesAdmin)
-admin_site.register(Results, ResultsAdmin)
-admin_site.unregister(Group)
+@admin.register(PendingStudies)
+class PendingStudiesAdmin(BaseStudiesAdmin):
+    pass
 
-def get_proxy_admin(model, base_admin, can_add=True, staff_only=False):
-    """ create generic admin pages for different results/study groups """
-    class AnythingProxyAdmin(base_admin):
-        list_display = [
-            x for x in base_admin.list_display if x not in {'get_study_group', 'Study_group'}
-        ]
-        list_filter = [
-            x for x in base_admin.list_filter if x not in {'Study__Study_group', 'Study_group'}
-        ]
+@admin.register(ApprovedResults)
+class ApprovedResultsAdmin(BaseResultsAdmin):
+    pass
 
-        def has_module_permission(self, request):
-            if staff_only and not request.user.is_superuser:
-                return False
-            return True
-        
-        def has_add_permission(self, request):
-            return can_add
+@admin.register(PendingResults)
+class PendingResultsAdmin(BaseResultsAdmin):
+    pass
 
-    return AnythingProxyAdmin
-
-def register_proxy_admins():
-    for p in proxies:
-        model_admin = get_proxy_admin(p, ResultsAdmin if issubclass(p, Results) else StudiesAdmin)
-        admin_site.register(p, model_admin)
-
-register_proxy_admins()

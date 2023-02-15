@@ -187,3 +187,78 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     top: 0;
     left: 0;
 }
+
+
+/* Multiple select CSS */
+.multiple-select {
+    display: inline-block;
+    border: 1px solid lightblue;
+    padding: 6px;
+    border-radius: 22px;
+    overflow: hidden;
+    list-style-type: none;
+    padding: 10px;
+}
+
+.multiple-select.empty::before {
+    content: 'None';
+    font-weight: bold;
+}
+
+.multiple-select.full::before {
+    content: 'All';
+    font-weight: bold;
+}
+
+.multiple-select.collapsed.full li.item.selected,
+.multiple-select.collapsed.empty li.item.selected {
+    display: none;
+}
+
+.multiple-select.collapsed:hover {
+    background-color: lightskyblue;
+}
+
+.multiple-select li.item:first-of-type {
+    border: none;
+}
+
+.multiple-select li.item {
+    cursor: pointer;
+    padding: 3px;
+    border-top: 1px solid lightcyan;
+}
+
+.multiple-select.collapsed li.item.selected {
+    display: inline-block;
+    border: 1px solid lightblue;
+    background-color: lightcyan;
+    border-radius: 10px;
+    margin: 2px;
+}
+
+.multiple-select.collapsed .icon {
+    display: none;
+}
+
+.multiple-select:not(.collapsed) .icon {
+    margin-right: 4px;
+}
+
+.multiple-select:not(.collapsed) li.item:hover {
+    background-color: azure;
+}
+
+.multiple-select:not(.collapsed) li.item.selected {
+    background-color: lightskyblue;
+}
+
+.multiple-select.collapsed li.item:not(.selected) {
+    display: none;
+}
+.multiple-select.collapsed li.buttons {
+    display: none;
+}
+.multiple-select:not(.collapsed) .title {
+    display: none;
+}

@@ -1,0 +1,19 @@
+{% load i18n %}
+<div id="multiple-filter-{{ spec.field_path }}">
+  <h3>
+    {% blocktranslate with filter_title=title %} By {{ filter_title }} {% endblocktranslate %}
+  </h3>
+
+  <div class="filter-content">{% blocktranslate %}Loading...{% endblocktranslate %}</div>
+
+  <script>
+    loadMultipleSelectFilter(
+        "{{ spec.base_query_string }}",
+        "{{ spec.null_query_string }}",
+        '#multiple-filter-{{ spec.field_path }} .filter-content', [
+        {% for choice in choices %}["{{ choice.code|iriencode }}", "{{ choice.display }}"],{% endfor %}
+    ], [
+        {% for code in spec.selected %}"{{ code|iriencode }}",{% endfor %}
+    ]);
+  </script>
+</div>

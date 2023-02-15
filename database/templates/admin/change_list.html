@@ -25,6 +25,9 @@
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-list{% endblock %}
+{% if opts.app_label == 'database' %}
+<script src="{% static 'js/multi-select.js' %}"></script>
+{% endif %}
 
 {% if not is_popup %}
 {% block breadcrumbs %}

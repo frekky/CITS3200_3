@@ -1,0 +1,23 @@
+<div class="numeric-range-filter" id="range-filter-{{ spec.field_name_gte }}-{{ spec.field_name_lte }}">
+    <h3>By {{ title }}</h3>
+    <form autocomplete="off">
+        <div class="number-range">
+            <input type="number" name="gte" placeholder="From" step="any"
+                {% if spec.lookup_val_gte is not None %}value="{{ spec.lookup_val_gte }}"{% endif %}>
+            <input type="number" name="lte" placeholder="To" step="any"
+                {% if spec.lookup_val_lte is not None %}value="{{ spec.lookup_val_lte }}"{% endif %}>
+        </div>
+        <div class="controls">
+            <input type="submit" class="button" value="Search">
+            <input type="reset" class="button" value="Reset">
+        </div>
+    </form>
+    <script>
+        loadNumericRangeFilter(
+            "#range-filter-{{ spec.field_name_gte }}-{{ spec.field_name_lte }}",
+            "{{ spec.base_query_string }}",
+            "{{ spec.lookup_kwarg_gte }}",
+            "{{ spec.lookup_kwarg_lte }}"
+        );
+    </script>
+</div>

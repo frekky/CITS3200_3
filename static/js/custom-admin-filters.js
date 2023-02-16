@@ -130,3 +130,23 @@ function loadMultipleSelectFilter(baseQuery, noItemsQuery, containerId, items, s
         }
     });
 }
+
+function loadNumericRangeFilter(containerId, baseQuery, lookupGte, lookupLte) {
+    let container = $(containerId);
+    let gteEl = container.find('[name="gte"]'), lteEl = container.find('[name="lte"]');
+    container.find('form').on('submit', (e) => {
+        e.preventDefault();
+        let qs = baseQuery;
+        let gte = gteEl.val(), lte = lteEl.val();
+        if (gte !== "") {
+            qs += (qs.endsWith('?') ? '' : '&') + lookupGte + '=' + gte;
+        }
+        if (lte !== "") {
+            qs += (qs.endsWith('?') ? '' : '&') + lookupLte + '=' + lte;
+        }
+        window.location = window.location.pathname + qs;
+    }).on('reset', (e) => {
+        e.preventDefault();
+        window.location = window.location.pathname + baseQuery;
+    })
+}

@@ -21,6 +21,7 @@ from django_admin_listfilter_dropdown.filters import (
 from django.db import models
 
 from database.admin_site import admin_site # Custom admin site
+from database.filters import TwoNumbersInRangeFilter
 
 # Hide the groups from the admin site
 admin_site.unregister(Group)
@@ -247,8 +248,8 @@ class BaseResultsAdmin(ViewModelAdmin):
         ('Indigenous_population', ChoiceDropdownFilter), # multiple select
         ('Country', DropdownFilter), # single select hierarchy Country -> Jurisdiction
         ('Jurisdiction', DropdownFilter), # multiple select from distinct values only with matching Country
-        ('Year_start', NumericRangeFilter), # single filter for entire start/stop range (inclusive of partial range overlaps)
-        ('Year_stop', NumericRangeFilter),
+        (TwoNumbersInRangeFilter.create('Observation dates (year)', ('Year_start', 'Year_stop'))), # single filter for entire start/stop range (inclusive of partial range overlaps)
+        #('Year_stop', NumericRangeFilter),
         ('Proportion', DropdownFilter), # single select
         ('StrepA_attributable_fraction', DropdownFilter), # single select
     )

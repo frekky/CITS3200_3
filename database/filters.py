@@ -1,17 +1,14 @@
-from django.contrib.admin.filters import ListFilter, ChoicesFieldListFilter
+from django.contrib.admin.filters import (
+    ListFilter, ChoicesFieldListFilter, AllValuesFieldListFilter,
+    FieldListFilter)
 from django.contrib.admin.utils import prepare_lookup_value, quote, unquote
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.contrib.admin.templatetags import admin_list
 from django.utils.safestring import mark_safe 
 
-class HierarchicalFilter(ListFilter):
-    """ 
-    Filter one or more fields in order of hierarchy, such that a 'parent' field must be filtered in order
-    for the 'child' field filter to show up. The child filter only displays the values present in the database
-    amongst rows which match the parent filter.
-    """
-    filter_spec = None # iterable of tuples containing field name and filter class
-    template = "admin/hierarchical_filter.html"
+class MyListFilter(ListFilter):
+    field_spec = None
+    title = None
     list_separator = ','
 
     def __init__(self, request, params, model, model_admin):
@@ -22,6 +19,7 @@ class HierarchicalFilter(ListFilter):
         # Note: don't call super().__init__ because it will raise error
 
         # from django.contrib.admin.filters.FieldListFilter
+        # load the filter data from the query string params
         self.used_parameters = {}
         for p in self.expected_parameters():
             if p in params:
@@ -29,39 +27,58 @@ class HierarchicalFilter(ListFilter):
                 self.used_parameters[p] = prepare_lookup_value(
                     p, value, self.list_separator
                 )
-
+    
     def has_output(self):
         return True
 
+    def choices(self, changelist):
+        self.changelist = changelist
+        return [] # nothing to return - template uses spec.filters instead
+
+    def base_query_string(self):
+        return self.changelist.get_query_string(remove=self.expected_parameters())
+    
+    @classmethod
+    def create(cls, title, field_spec):
+        """ return filter class for ModelAdmin's list_filter with field spec provided """
+        return type(cls.__name__, (cls, ), {
+            'title': title,
+            'field_spec': field_spec,
+        })
+
+class HierarchicalFilter(MyListFilter):
+    """ 
+    Single or multiple select filters from 'top level' to 'bottom level' ie for fields
+    which contain dependent or redundant data (eg. broad category -> specific category).
+    Records with null values in specified fields will not appear except when this 
+    filter is unset.
+    """
+    field_spec = None
+    template = "admin/hierarchical_filter.html"
+
     def expected_parameters(self):
-        params = []
-        for field, _filter in self.filter_spec:
-            for parm in _filter.expected_parameters():
-                params.append(parm)
-        return params
+        return [ field for field, _ in self.field_spec ]
 
     def filters(self):
         # keep track cumulatively of filter params which are "consumed" by filters
         # from highest level to lowest level in hierarchy
         self_and_child_params = self.expected_parameters()
         
-        for field, _filter in self.filter_spec:
-            filter_applied = False
-            for parm in _filter.expected_parameters():
-                if parm in self_and_child_params:
-                    # remove params from the list as we find them
-                    self_and_child_params.remove(parm) 
-                if parm self.params:
-                    filter_applied = True
-                
-            yield {
-                'html': mark_safe(admin_list.admin_list_filter(self.changelist, _filter)),
-                'clear_filter': self.changelist.get_query_string()
-            }
+        for field, _filter in self.field_spec:
+            pass
+            #filter_applied = False
+            #for parm in _filter.expected_parameters():
+            #    if parm in self_and_child_params:
+            #        # remove params from the list as we find them
+            #        self_and_child_params.remove(parm) 
+            #    if parm self.params:
+            #        filter_applied = True
+            #    
+            #yield {
+            #    'html': mark_safe(admin_list.admin_list_filter(self.changelist, _filter)),
+            #    'clear_filter': self.changelist.get_query_string()
+            #}
 
-    def choices(self, changelist):
-        self.changelist = changelist
-        return # nothing to return - template uses spec.filters instead
     
     def queryset(self, request, queryset):
         # from django.contrib.admin.filters.FieldListFilter
@@ -70,25 +87,50 @@ class HierarchicalFilter(ListFilter):
         except (ValueError, ValidationError) as e:
             raise IncorrectLookupParameters(e)
 
-def hierarchical_data_filter_factory(*filter_specs):
-    class MyFilter(HierarchicalDataFilter):
-        filter_spec = filter_specs
-    return MyFilter
-
-
-class TwoNumbersInRangeFilter(ListFilter):
-    """
-    Range filter using two numeric fields (ie. Age_min, Age_max) which specify a range, where rows are filtered out
-    which do not intersect the filter range.
-    """
-
+class HierarchicalFilterFilter:
     pass
 
+class HierarchicalSingleFilter(HierarchicalFilterFilter):
+    pass
 
+class HierarchicalMultipleFilter(HierarchicalFilterFilter):
+    pass
+
+class TwoNumbersInRangeFilter(MyListFilter):
+    """
+    Range filter using two numeric fields (ie. Age_min, Age_max) which specify a
+    range, where rows are filtered out which do not intersect the filter range.
+    Adapted in parts from rangefilter.NumericRangeFilter
+    (https://github.com/Danycraft98/django-rangefilter under MIT license)
+    """
+    field_spec = None # must be tuple (field_gte, field_lte)
+    field_name_gte = None
+    field_name_lte = None
+    template = "admin/numeric_range_filter.html"
+
+    def __init__(self, request, params, model, model_admin):
+        self.field_name_gte, self.field_name_lte = self.field_spec
+        self.lookup_kwarg_gte = "%s__range__gte" % self.field_name_gte
+        self.lookup_kwarg_lte = "%s__range__lte" % self.field_name_lte
+        super().__init__(request, params, model, model_admin)
+        self.lookup_val_gte = self.used_parameters.get(self.lookup_kwarg_gte)
+        self.lookup_val_lte = self.used_parameters.get(self.lookup_kwarg_lte)
+
+    def expected_parameters(self):
+        return [self.lookup_kwarg_gte, self.lookup_kwarg_lte]
+
+    def queryset(self, request, queryset):
+        filter_args = {}
+        if self.lookup_val_gte is not None:
+            filter_args['%s__gte' % self.field_name_gte] = self.lookup_val_gte
+        if self.lookup_val_lte is not None:
+            filter_args['%s__lte' % self.field_name_lte] = self.lookup_val_lte
+        return queryset.filter(**filter_args)
 
 class ChoicesMultipleSelectFilter(FieldListFilter):
     """
-    Choice-based multiple selection filter where rows are filtered out which do not match ANY of the selected values.
+    Choice-based multiple selection filter where rows are filtered out which
+    do not match ANY of the selected values.
     """
     def __init__(self, field, request, params, model, model_admin, field_path):
         # adapted from django.contrib.admin.filters.ChoicesFieldListFilter 

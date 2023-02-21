@@ -25,12 +25,15 @@
 				<div class="container">
 					<form class="form-signin" method="post">
 						{% csrf_token %}
+						{{ form.non_field_errors }}
+
 						<div class="form-row row">
 							<div class="form-group col-12 mb-2">
 								<label for="inputEmail" class="ms-1">
 									Email
 								</label>
 								<input type="email" name="email" id="id_input_email" class="form-control" placeholder="Email address" required autofocus value={{form.initial.email}}>
+								{{ form.email.errors }}
 							</div>
 						</div>
 
@@ -39,15 +42,15 @@
 								<label for="inputFirstName" class="ms-1">
 									First Name
 								</label>
-								<input type="text" name="first_name" id="id_input_first_name" class="form-control" placeholder="First Name" required
-                            value="{{form.initial.first_name}}">
+								<input type="text" name="first_name" id="id_input_first_name" class="form-control" placeholder="First Name" required value="{{form.initial.first_name}}">
+								{{ form.first_name.errors }}
 							</div>
 							<div class="form-group col-md-6 mb-2">
 								<label for="inputLastName" class="ms-1">
 									Last Name
 								</label>
-								<input type="text" name="last_name" id="id_input_last_name" class="form-control" placeholder="Last Name" required
-                            value="{{form.initial.last_name}}">
+								<input type="text" name="last_name" id="id_input_last_name" class="form-control" placeholder="Last Name" required value="{{form.initial.last_name}}">
+								{{ form.last_name.errors }}
 							</div>
 						</div>
 
@@ -56,38 +59,25 @@
 								<label for="inputProfession" class="ms-1">
 									Profession
 								</label>
-								<input type="text" name="profession" id="id_input_profession" class="form-control" placeholder="Profession" required
-                            value="{{form.initial.profession}}">
+								<input type="text" name="profession" id="id_input_profession" class="form-control" placeholder="Profession" required value="{{form.initial.profession}}">
+								{{ form.profession.errors }}
 							</div>
 							<div class="form-group col-md-4">
 								<label for="inputInstitution" class="ms-1">
 									Institution
 								</label>
-								<input type="text" name="institution" id="id_input_institution" class="form-control" placeholder="Institution" required
-                            value="{{form.initial.institution}}">
+								<input type="text" name="institution" id="id_input_institution" class="form-control" placeholder="Institution" required value="{{form.initial.institution}}">
+								{{ form.institution.errors }}
 							</div>
 							<div class="form-group col-md-4">
 								<label for="inputCountry" class="ms-1">
 									Country
 								</label>
-								<input type="text" name="country" id="id_input_country" class="form-control" placeholder="Country" required
-                            value="{{form.initial.country}}">
+								<input type="text" name="country" id="id_input_country" class="form-control" placeholder="Country" required value="{{form.initial.country}}">
+								{{ form.country.errors }}
 							</div>
 						</div>
-						{% comment %} Display form errors {% endcomment %}
-						{% for field in form %}
-                            {% for error in field.errors %}
-								<p style="color: red">
-									{{ error }} 
-								</p>
-                            {% endfor %}
-                        {% endfor %}
                             
-                        {% if form.non_field_errors %}
-                            <div style="color: red">
-                                <p>{{form.non_field_errors}}</p>
-                            </div>        
-                        {% endif %}
 						<!-- Save/Cancel buttons -->
 						<div class="form-row row">
 							<button class="mt-4 btn btn-primary full_width" type="submit">

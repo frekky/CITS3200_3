@@ -27,54 +27,58 @@ from django.core.mail import send_mail
 from django.db.models.query_utils import Q
 from django.contrib.auth.tokens import default_token_generator
 
+import logging, time
+
+logger = logging.getLogger(__name__)
+
 def home(request):
     return render(request, 'database/home.html')
 
 def get_base_url(request):
     return '%s://%s' % ('https' if request.is_secure() else 'http', get_current_site(request).domain)
 
-def send_activation_email(request, user, to_email):
-    mail_subject = 'ASAVI Strep A Database: Activate your account'
-    activate_url = get_base_url(request) + reverse('activate', args=[urlsafe_base64_encode(force_bytes(user.pk)), account_activation_token.make_token(user)])
-    message = render_to_string('database/acc_active_email.html', {
-        'user': user,
-        'activate_url': activate_url,
-      })
-    email = EmailMessage(subject=mail_subject, body=message, to=[to_email])
-    email.content_subtype = "html"
-    
-    if email.send():
-        messages.success(request, f'Please go to your email address inbox and click on received activation link to confirm and complete the registration. Check your spam folder.')
-    else:
-        messages.error(request, f'Problem sending email to {to_email}, check if you typed it correctly.')
-
 @csrf_protect
-def signupPage(request):
+def signup_create(request):
     if request.user.is_authenticated:
         return redirect('visitor')
-    else:
-        form = CreateUserForm() #createrform imported from forms.py
-        if request.method == 'POST':
-            form = CreateUserForm(request.POST)
-                        
-            if form.is_valid():
-                user = form.save(commit=False)
-                user.is_active = False
-                user.save()
-                email = form.cleaned_data.get('email')
-                send_activation_email(request, user, email)
-                return redirect('home')
 
-            else:
-                form = CreateUserForm()
-                messages.error(request, f'Something went wrong. Please try again. Please do not create an account with an email address you have registered an account with. Ensure you enter first name and last name')
+    form = CreateUserForm() #createrform imported from forms.py
+    if request.method == 'POST':
+        form = CreateUserForm(request.POST)
+
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_active = False
+            
+            try:
+                user.save()
+                # send activation email
+                mail_subject = 'ASAVI Strep A Database: Activate your account'
+                activate_url = get_base_url(request) + reverse('activate_confirm', args=[urlsafe_base64_encode(force_bytes(user.pk)), account_activation_token.make_token(user)])
+                message = render_to_string('database/acc_active_email.html', {
+                    'user': user,
+                    'activate_url': activate_url,
+                })
+                email = EmailMessage(subject=mail_subject, body=message, to=[user.email])
+                email.content_subtype = "html"
+                email.send()
+                return redirect(reverse('signup_done'))
+            except Exception as e:
+                logger.error('Account activation failed for new user %s: %s: %s' % (email, str(type(e)), str(e)))
+                if user.pk:
+                    user.delete() # remove half-activated user
+                time.sleep(2)
+                messages.error(request, 'Error sending account activation email: invalid email address, or an account is already registered with that email address. Please try again or contact the website administrator.' % str(e))
     
     context = {'form': form}
     return render(request, 'database/signup.html', context)
 
+def signup_done(request):
+    return render(request, 'database/signup_done.html')
+
 @csrf_protect
 # Activate account after receiving email confirmation
-def activate(request, uidb64, token):
+def activate_confirm(request, uidb64, token):
     User = get_user_model()
     
     try:
@@ -133,14 +137,6 @@ def database_search(request):
 # Update user profile properties
 @login_required(login_url='login')
 def edit_profile_page(request):
-    if not request.user.is_authenticated:
-        return redirect("login")
-    
-    user_id = request.user.id #id of user
-    account = Users.objects.get(pk=user_id) #from database
-
-    if account.pk != request.user.pk: #comparison of database pk vs logged in user pk
-        return HttpResponse("You cannot edit someone elses profile.")
     context = {}
     if request.POST:
         form = AccountUpdateForm(request.POST, instance=request.user)
@@ -149,31 +145,10 @@ def edit_profile_page(request):
             new_email = form.cleaned_data['email']
             messages.success(request, f'Your profile has been successfully updated.')
             return redirect('visitor')
-        else:
-            form = AccountUpdateForm(request.POST, instance=request.user,
-                initial={					
-                    "email": account.email,
-                    "first_name": account.first_name,
-                    "last_name": account.last_name,
-                    "profession": account.profession,
-                    "institution": account.institution,
-                    "country": account.country
-                }
-            )
-            context['form'] = form
     else:
         # display user properties on edit page
-        form = AccountUpdateForm(
-            initial={					
-                    "email": account.email, 
-                    "first_name": account.first_name,
-                    "last_name": account.last_name,
-                    "profession": account.profession,
-                    "institution": account.institution,
-                    "country": account.country
-            }
-        )
-        context['form'] = form
+        form = AccountUpdateForm(instance=request.user)
+    context['form'] = form
     
     return render(request, 'database/edit_profile_page.html', context)
 
@@ -183,8 +158,8 @@ def password_reset_request(request):
         password_form = PasswordResetForm(request.POST)
         if password_form.is_valid():
             data = password_form.cleaned_data['email']
-            to_email = Users.objects.filter(Q(email=data))
-            if to_email.exists():
+            to_email = list(Users.objects.filter(email=data))
+            if len(to_email) > 0:
                 for user in to_email:
                     reset_url = get_base_url(request) + reverse('password_reset_confirm', args=[urlsafe_base64_encode(force_bytes(user.pk)), default_token_generator.make_token(user)])
                     message = render_to_string('database/password/password_reset_email.html', {
@@ -199,10 +174,8 @@ def password_reset_request(request):
                         return HttpResponse('Invalid Header')
                     return redirect('password_reset_done')
             else:
-                messages.error(request, f'Problem sending email, check if you typed it correctly.')
-                return redirect('password_reset')
-        else:
-                messages.error(request, f'Problem sending email, check if you typed it correctly.')
+                time.sleep(2)
+                messages.error(request, f'Error sending email or no account found with that email address.')
                 return redirect('password_reset')
     else:
         password_form = PasswordResetForm()

@@ -240,3 +240,11 @@ footer span {
 #footer-btm {
     background-color: var(--burgundy);
 }
+
+ul.errorlist {
+    color: rgb(184, 30, 30);
+    font-size: 90%;
+    line-height: 150%;
+    list-style-type: none;
+    padding-left: 1em;
+}

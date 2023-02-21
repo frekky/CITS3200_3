@@ -3,7 +3,6 @@
 {% block title %}
 	Signup
 {% endblock %}
-
 {% block style %}
 
     @media only screen and (max-device-height: 900px) {
@@ -14,102 +13,109 @@
     }
 	
 {% endblock %}
-		
 {% block main %}
-	<div class="form_container">
-		<div class="d-flex justify-content-center h-100">
-			<div class="user_card card gradient-border">
-				<div class="d-flex justify-content-center">
-					<h2>
-						Sign Up
-					</h2>
-				</div>
-				<div class="container">
-					<form method="POST" action="" id="form">
-						{% csrf_token %}
-						<div class="form-row row">
-							<div class="form-group col-md-12 mb-2">
-								<label for="inputEmail" class="ms-1">
-									Email
-								</label>
-								<input type="email" name="email" class="form-control" id="inputEmail" placeholder="Enter Email">
-							</div>
+<div class="form_container">
+	<div class="d-flex justify-content-center h-100">
+		<div class="user_card card gradient-border">
+			<div class="d-flex justify-content-center">
+				<h2>
+					Sign Up
+				</h2>
+			</div>
+			<div class="container">
+				<form method="POST" action="" id="form">
+					{% csrf_token %}
+					{{ form.non_field_errors }}
+					<div class="form-row row">
+						<div class="form-group col-md-12 mb-2">
+							<label for="{{ form.email.id_for_label }}" class="ms-1">
+								Email
+							</label>
+							<input type="email" name="email" class="form-control" id="{{ form.email.id_for_label }}" placeholder="Enter Email" 
+								{% if form.email.value %}value="{{ form.email.value }}"{% endif %}>
+							{{ form.email.errors }}
 						</div>
-
-						<div class="form-row row">
-							<div class="form-group col-md-6 mb-2">
-								<label for="inputFirstName" class="ms-1">
-									First Name
-								</label>
-								<input type="first_name" name="first_name" class="form-control" id="inputFirstName" placeholder="Enter First Name">
-							</div>
-							<div class="form-group col-md-6 mb-2">
-								<label for="inputLastName" class="ms-1">
-									Last Name
-								</label>
-								<input type="last_name" name="last_name" class="form-control" id="inputLastName" placeholder="Enter Last Name">
-							</div>
-						</div>
-
-						<div class="form-row row">
-							<div class="form-group col-md-3 mb-2">
-								<label for="inputProfession" class="ms-1">
-									Profession
-								</label>
-								<input type="text" name="profession" class="form-control" id="inputProfession" placeholder="Enter Profession">
-							</div>
-							<div class="form-group col-md-3 mb-2">
-								<label for="inputInstitution" class="ms-1">
-									Institution
-								</label>
-								<input type="text" name="institution" class="form-control" id="inputInstitution" placeholder="Enter Institution">
-							</div>
-							<div class="form-group col-md-6 mb-2">
-								<label for="inputCountry" class="ms-1">
-									Country
-								</label>
-								<input type="text" name="country" class="form-control" id="inputCountry" placeholder="Enter Country">
-							</div>
-						</div>
-
-						<div class="form-row row">
-							<div class="form-group col-md-6 mb-2">
-								<label for="inputPassword" class="ms-1">
-									Password
-								</label>
-								<input type="password" name="password1" class="form-control" id="inputPassword1" placeholder="Enter Password">
-							</div>
-							<div class="form-group col-md-6 mb-2">
-								<label for="inputPassword" class="ms-1">
-									Repeat password
-								</label>
-								<input type="password" name="password2" class="form-control" id="inputPassword2" placeholder="Repeat Password">
-							</div>
-						</div>
-
-						{{form.errors}}
-
-						<div class="d-flex justify-content-center mt-3">
-							<button class="btn btn-primary full_width" type="submit">
-								Register Account
-							</button>
-						</div>
-					</form>
-				</div>
-				<ul>
-					{% for error in form.non_field_errors %}
-						<li> {{ error }} </li>
-					{% endfor %}
-				</ul>
-				<div class="mt-4">
-					<div class="d-flex justify-content-center links">
-						Already have an account?&nbsp;
-						<a href="{% url 'login' %}" class="ml-2">
-							Login
-						</a>
 					</div>
+
+					<div class="form-row row">
+						<div class="form-group col-md-6 mb-2">
+							<label for="{{ form.first_name.id_for_label }}" class="ms-1">
+								First Name
+							</label>
+							<input type="first_name" name="first_name" class="form-control" id="{{ form.first_name.id_for_label }}" placeholder="Enter First Name"
+								{% if form.first_name.value %}value="{{ form.first_name.value }}"{% endif %}>
+							{{ form.first_name.errors }}
+						</div>
+						<div class="form-group col-md-6 mb-2">
+							<label for="{{ form.last_name.id_for_label }}" class="ms-1">
+								Last Name
+							</label>
+							<input type="last_name" name="last_name" class="form-control" id="{{ form.last_name.id_for_label }}" placeholder="Enter Last Name" 
+								{% if form.last_name.value %}value="{{ form.last_name.value }}"{% endif %}>
+							{{ form.last_name.errors }}
+						</div>
+					</div>
+
+					<div class="form-row row">
+						<div class="form-group col-md-3 mb-2">
+							<label for="inputProfession" class="ms-1">
+								Profession
+							</label>
+							<input type="text" name="profession" class="form-control" id="inputProfession" placeholder="Enter Profession"
+								{% if form.profession.value %}value="{{ form.profession.value }}"{% endif %}>
+							{{ form.profession.errors }}
+						</div>
+						<div class="form-group col-md-3 mb-2">
+							<label for="inputInstitution" class="ms-1">
+								Institution
+							</label>
+							<input type="text" name="institution" class="form-control" id="inputInstitution" placeholder="Enter Institution"
+								{% if form.institution.value %}value="{{ form.institution.value }}"{% endif %}>
+							{{ form.institution.errors }}
+						</div>
+						<div class="form-group col-md-6 mb-2">
+							<label for="inputCountry" class="ms-1">
+								Country
+							</label>
+							<input type="text" name="country" class="form-control" id="inputCountry" placeholder="Enter Country" 
+								{% if form.country.value %}value="{{ form.country.value }}"{% endif %}>
+							{{ form.country.errors }}
+						</div>
+					</div>
+
+					<div class="form-row row">
+						<div class="form-group col-md-6 mb-2">
+							<label for="inputPassword" class="ms-1">
+								Password
+							</label>
+							<input type="password" name="password1" class="form-control" id="inputPassword1" placeholder="Enter Password"
+								{% if form.password1.value %}value="{{ form.password1.value }}"{% endif %}>
+						</div>
+						<div class="form-group col-md-6 mb-2">
+							<label for="inputPassword" class="ms-1">
+								Repeat password
+							</label>
+							<input type="password" name="password2" class="form-control" id="inputPassword2" placeholder="Repeat Password">
+							{{ form.password2.errors }}
+						</div>
+					</div>
+
+					<div class="d-flex justify-content-center mt-3">
+						<button class="btn btn-primary full_width" type="submit">
+							Register Account
+						</button>
+					</div>
+				</form>
+			</div>
+			<div class="mt-4">
+				<div class="d-flex justify-content-center links">
+					Already have an account?&nbsp;
+					<a href="{% url 'login' %}" class="ml-2">
+						Login
+					</a>
 				</div>
 			</div>
 		</div>
 	</div>
+</div>
 {% endblock %}

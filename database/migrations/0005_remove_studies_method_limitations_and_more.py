@@ -12,41 +12,41 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RemoveField(
-            model_name='studies',
+            model_name='studiesmodel',
             name='Method_limitations',
         ),
         migrations.AddField(
-            model_name='studies',
+            model_name='studiesmodel',
             name='Focus_of_study',
             field=models.CharField(blank=True, help_text='Brief description of the focus of the study.', max_length=1000),
         ),
         migrations.AlterField(
-            model_name='results',
+            model_name='resultsmodel',
             name='Observation_time_years',
             field=models.DecimalField(blank=True, decimal_places=2, help_text='Total observation time used by the study for generating the point estimate.', max_digits=10, null=True, validators=[django.core.validators.MaxValueValidator(200.0)], verbose_name='Observational time (years)'),
         ),
         migrations.AlterField(
-            model_name='results',
+            model_name='resultsmodel',
             name='Specific_location',
             field=models.CharField(blank=True, help_text='Point estimates stratified by specific geographic locations (where reported), for example: Kimberley, Far North Queensland or Central Australia.', max_length=100, null=True, verbose_name='Specific geographic locations'),
         ),
         migrations.AlterField(
-            model_name='studies',
+            model_name='studiesmodel',
             name='Data_source_name',
             field=models.CharField(blank=True, help_text='Name of the dataset, project, consortium or specific disease register (if applicable).', max_length=200, null=True, verbose_name='Name of data source'),
         ),
         migrations.AlterField(
-            model_name='studies',
+            model_name='studiesmodel',
             name='Disease',
             field=models.CharField(blank=True, choices=[('APSGN', 'APSGN'), ('ARF', 'ARF'), ('iStrep A - NF', 'iStrep A - NF'), ('iStrep A - Scarlet fever', 'iStrep A - Scarlet fever'), ('iStrep A - bacteraemia', 'iStrep A - bacteraemia'), ('iStrep A - cellulitis', 'iStrep A - cellulitis'), ('iStrep A - pneumonia', 'iStrep A - pneumonia'), ('iStrep A - sepsis', 'iStrep A - sepsis'), ('iStrep A - severe TSS', 'iStrep A - severe TSS'), ('iStrep A - all', 'iStrep A - all'), ('Superficial skin & throat infection', 'Superficial skin & throat infection'), ('Superficial throat infection', 'Superficial throat infection'), ('Superficial skin infection', 'Superficial skin infection'), ('Other', 'Other')], help_text='Subcategory of disease within the broader study group. Example: iStrepA - bactaraemia', max_length=100, verbose_name='Specific Disease'),
         ),
         migrations.AlterField(
-            model_name='studies',
+            model_name='studiesmodel',
             name='Limitations_identified',
             field=models.CharField(blank=True, help_text='Brief summary of any limitations identified by authors of the publication. (Optional)', max_length=1000, null=True),
         ),
         migrations.AlterField(
-            model_name='studies',
+            model_name='studiesmodel',
             name='Other_points',
             field=models.TextField(blank=True, help_text='This variable captures any other relevant notes relating to the study that may impact the interpretation of Strep A burden estimates. (Optional)', null=True),
         ),

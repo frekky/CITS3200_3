@@ -76,13 +76,16 @@ span {
     padding: 10px 20px;
 }
 
+.btn {
+    border-radius: 20px;
+    padding: 7px 22px;
+}
+
 /* Button */
 .btn-primary {
     background-color: var(--brown);
     border-color: var(--brown);
     color: var(--light-orange);
-    border-radius: 20px;
-    padding: 7px 22px;
 }
 
 .btn-primary:hover {

@@ -25,11 +25,22 @@ Home
 			<h5>Strep A burden of disease data is searchable by manuscript author, title, disease type, calendar year, population group, study setting/location and a number of other broad methodological, clinical and demographic variables.<h5>
 		</div>
 		{% if user.is_authenticated %}
-		<a class="m-auto" href="{% url 'admin:database_results_changelist' %}">
-			<button type="button" class="btn btn-primary">
-				View database
-			</button>
-		</a>
+		<div class="d-flex">
+			<a class="me-2 mb-2" href="{% url 'admin:database_results_changelist' %}">
+				<button type="button" class="btn btn-primary">
+					View database
+				</button>
+			</a>
+			{% for doc in documents %}
+			<a class="document-link me-2 mb-2" href="{{ doc.upload_file.url }}" target="_blank">
+				<button type="button" class="btn btn-warning">
+					<span class="material-icons">help</span>&nbsp;
+					{{ doc.title }}
+				</button>
+			</a>
+			{% endfor %}
+		</div>
+
 		{% else %}
 		<a class="m-auto" href="{% url 'login' %}">
 			<button type="button" class="btn btn-primary">

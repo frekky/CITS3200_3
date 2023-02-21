@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.mail import EmailMessage
 from django.contrib import messages #import for login messages
 
-from database.models import Users
+from database.models import Users, Document
 from database.forms import CreateUserForm, AccountUpdateForm, StudiesForm #createrform imported from forms.py
 
 # Prevent usage of browser back button
@@ -32,7 +32,12 @@ import logging, time
 logger = logging.getLogger(__name__)
 
 def home(request):
-    return render(request, 'database/home.html')
+    docs = Document.objects.all()
+    if not request.user.is_superuser:
+        docs = docs.filter(all_users = True)
+    return render(request, 'database/home.html', context={
+        'documents': docs,
+    })
 
 def get_base_url(request):
     return '%s://%s' % ('https' if request.is_secure() else 'http', get_current_site(request).domain)

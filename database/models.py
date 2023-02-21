@@ -728,3 +728,13 @@ PendingResults = proxy_model_factory(
     name = 'results_pending',
     filter_args = {'Approved_by__isnull': True},
 )
+
+class Document(models.Model):
+    title = models.CharField(max_length=100, help_text="Title of download button shown to users on website home screen")
+    upload_file = models.FileField(
+        upload_to = 'documents/',
+    )
+    all_users = models.BooleanField(blank=True, verbose_name = 'Visible to all users', help_text="Whether all users can access this document or if it is only visible to administrators.")
+
+    def __str__(self):
+        return self.title

@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Studies',
+            name='StudiesModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('Unique_identifier', models.CharField(blank=True, help_text='Identifier linking individual Results to each Study in the Studies/Methods data', max_length=12, null=True, verbose_name='Unique Identifier (Internal Use Only)')),
@@ -63,10 +63,11 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'Study',
                 'verbose_name_plural': 'Studies',
+                'db_table': 'database_studies',
             },
         ),
         migrations.CreateModel(
-            name='Results',
+            name='ResultsModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('Age_general', models.CharField(blank=True, help_text='The general age grouping considered for inclusion by the study, classified as “all ages” (if studies did not have any age restrictions); “infants”, “young children”, “children and adolescents”, “18 years and younger” and “16 years and older”. ', max_length=50, verbose_name='Age category')),
@@ -94,38 +95,13 @@ class Migration(migrations.Migration):
                 ('Hospitalised_flag', models.BooleanField(blank=True, null=True, verbose_name='Point estimate includes hospitalised patients')),
                 ('Schoolchildren_flag', models.BooleanField(blank=True, null=True, verbose_name='Point estimate includes data of school children')),
                 ('is_approved', models.BooleanField(default=False, help_text='Determines whether this study has been approved by an administrator or is submitted and pending approval.', verbose_name='Results approved')),
-                ('Study', models.ForeignKey(help_text='Select or add the study where these results were published.', null=True, on_delete=django.db.models.deletion.CASCADE, to='database.studies')),
+                ('Study', models.ForeignKey(help_text='Select or add the study where these results were published.', null=True, on_delete=django.db.models.deletion.CASCADE, to='database.studiesmodel')),
                 ('added_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL, verbose_name='Results added/submitted by user')),
             ],
             options={
                 'verbose_name': 'Result',
                 'verbose_name_plural': 'Results',
+                'db_table': 'database_results',
             },
-        ),
-        migrations.CreateModel(
-            name='isapproved_False_results',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Results (Pending Approval)',
-                'verbose_name_plural': 'Results (Pending Approval)',
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('database.results',),
-        ),
-        migrations.CreateModel(
-            name='isapproved_False_studies',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Studies (Pending Approval)',
-                'verbose_name_plural': 'Studies (Pending Approval)',
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('database.studies',),
         ),
     ]

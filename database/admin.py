@@ -13,7 +13,7 @@ from admin_action_buttons.admin import ActionButtonsMixin
 from database.models import (
     Users, ApprovedStudies, ApprovedResults, 
     PendingStudies, PendingResults,
-    ImportSource)
+    ImportSource, Document)
 
 from .actions import download_as_csv
 from django_admin_listfilter_dropdown.filters import (
@@ -54,6 +54,10 @@ class AccountAdmin(ActionButtonsMixin, UserAdmin):
 @admin.register(ImportSource)
 class ImportAdmin(ActionButtonsMixin, ModelAdmin):
     list_display = ('Original_filename', 'Import_type', 'Row_count', 'Imported_by', 'Import_status')
+
+@admin.register(Document)
+class DocumentAdmin(ActionButtonsMixin, ModelAdmin):
+    list_display = ('title', 'upload_file', 'all_users')
 
 # override default behaviour to allow viewing by anyone
 class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
@@ -116,7 +120,7 @@ class BaseStudiesAdmin(ViewModelAdmin):
         ('Surveillance_setting', ChoiceDropdownFilter),
         ('Clinical_definition_category', ChoiceDropdownFilter),
         ('Coverage', ChoiceDropdownFilter),
-        ('Climate', ChoiceDropdownFilter), 
+        ('Climate', ChoiceDropdownFilter),
         ('Aria_remote', ChoiceDropdownFilter),
     )
 

@@ -45,7 +45,7 @@ def get_base_url(request):
 @csrf_protect
 def signup_create(request):
     if request.user.is_authenticated:
-        return redirect('visitor')
+        return redirect('home')
 
     form = CreateUserForm() #createrform imported from forms.py
     if request.method == 'POST':
@@ -104,7 +104,7 @@ def activate_confirm(request, uidb64, token):
 @csrf_protect
 def loginPage(request, *args, **kwargs):
     if request.user.is_authenticated:
-        return redirect('visitor')
+        return redirect('home')
     else:
         if request.method == 'POST':
             email = request.POST.get('email')
@@ -116,7 +116,7 @@ def loginPage(request, *args, **kwargs):
             
             if user is not None:
                 login(request, user)                
-                return redirect('admin:database_studies_changelist')
+                return redirect('home')
             else:
                 messages.info(request, 'Email OR Password is incorrect')
             
@@ -127,21 +127,14 @@ def logoutUser(request):
     logout(request)
     return redirect('login')
 
-# Visitor dashboard
-# restrict page view to logged in users
-
 @login_required(login_url='login')
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
-def visitor(request):
+def user_profile(request):
     return render(request, 'database/userprofile.html')
-
-@login_required(login_url='login')
-def database_search(request):
-    return render(request, 'database/database_search.html')
 
 # Update user profile properties
 @login_required(login_url='login')
-def edit_profile_page(request):
+def user_profile_edit(request):
     context = {}
     if request.POST:
         form = AccountUpdateForm(request.POST, instance=request.user)
@@ -149,7 +142,7 @@ def edit_profile_page(request):
             form.save() #apply form save function
             new_email = form.cleaned_data['email']
             messages.success(request, f'Your profile has been successfully updated.')
-            return redirect('visitor')
+            return redirect('user_profile')
     else:
         # display user properties on edit page
         form = AccountUpdateForm(instance=request.user)

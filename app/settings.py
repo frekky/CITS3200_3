@@ -39,15 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'database',
     'admin_action_buttons',
     'rangefilter',
     'admin_searchable_dropdown',
     'django_admin_listfilter_dropdown',
-    'database',
     'database.admin_apps.MyAdminConfig', # put admin site last so that our templates override the default admin site ones - FVP
     'coverage',
     'rest_framework', # for unit testing
-    
 ]
 
 MIDDLEWARE = [

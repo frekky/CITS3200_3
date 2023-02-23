@@ -8,7 +8,8 @@ function MultipleSelect(container, items, initial, onSelect) {
     this.selection = {}; // per item code: {selected: true/false, el: JQueryElement}
     this.active = false;
 
-    this.divOuter = $('<ul/>').addClass('multiple-select collapsed').appendTo(container);
+    container.html('');
+    this.divOuter = $('<div/>').addClass('multiple-select form-control collapsed').appendTo(container);
 
     this.divOuter.on('click', function(e) {
         console.log('ul click');
@@ -17,32 +18,35 @@ function MultipleSelect(container, items, initial, onSelect) {
         }
     });
 
-    this.divSelectBtns = $('<li/>').addClass('buttons mb-1').appendTo(this.divOuter);
-    this.btnAll = $('<button type="button" class="btn-sm btn-outline-prmary me-1"/>').text('All').appendTo(this.divSelectBtns).on('click', (e) => {
+    this.divSelectBtns = $('<div/>').addClass('buttons btn-group mb-1').appendTo(this.divOuter);
+    this.btnAll = $('<button type="button" class="btn btn-sm btn-primary me-1"/>').text('All').appendTo(this.divSelectBtns).on('click', (e) => {
         e.stopPropagation();
         self.doSelectAll(true);
     });
-    this.btnNone = $('<button type="button" class="btn-sm btn-outline-secondary"/>').text('None').appendTo(this.divSelectBtns).on('click', (e) => {
+    this.btnNone = $('<button type="button" class="btn btn-sm btn-outline-secondary"/>').text('None').appendTo(this.divSelectBtns).on('click', (e) => {
         e.stopPropagation();
         self.doSelectAll(false);
     });
+    this.itemsDiv = $('<div class="item-container"/>').appendTo(this.divOuter);
 
+    var numSelected = 0;
     for (var itm of items) {
         let code = itm[0];
         let initSel = initial.includes(code);
-        let el = $('<li/>').addClass('item').appendTo(this.divOuter);
+        if (initSel) numSelected++;
+        let el = $('<div class="item"/>').appendTo(this.itemsDiv);
         let icon = $('<span class="icon material-icons"/>').appendTo(el);
         let text = $('<span/>').text(itm[1]).appendTo(el);
 
         function setSelected(selected) {
             self.selection[code].active = selected;
             if (selected) {
-                el.addClass('selected');
-                icon.addClass('md-green');
+                el.addClass('selected-item');
+                icon.addClass('md-green').removeClass('md-red');
                 icon.text('check_circle_outline');
             } else {
-                el.removeClass('selected');
-                icon.addClass('md-red');
+                el.removeClass('selected-item');
+                icon.addClass('md-red').removeClass('md-green');
                 icon.text('highlight_off');
             }
         }
@@ -67,17 +71,23 @@ function MultipleSelect(container, items, initial, onSelect) {
         });
     }
 
-    this.divBtns = $('<li/>').addClass('buttons mt-1').appendTo(this.divOuter);
-    this.btnCancel = $('<button type="button" class="btn-sm btn-secondary me-1"/>').text('Cancel').appendTo(this.divBtns).on('click', function (e) {
+    this.divOuter.removeClass(['empty', 'full']);
+    if (numSelected == 0) {
+        this.divOuter.addClass('empty');
+    } else if (numSelected == Object.keys(this.selection).length) {
+        this.divOuter.addClass('full');
+    }
+
+    this.divBtns = $('<div/>').addClass('buttons btn-group mt-1').appendTo(this.divOuter);
+    this.btnCancel = $('<button type="button" class="btn btn-sm btn-secondary me-1"/>').text('Cancel').appendTo(this.divBtns).on('click', function (e) {
         e.stopPropagation();
         self.close(true);
     });
-    this.btnOk = $('<button type="button" class="btn-sm btn-primary"/>').text('OK').appendTo(this.divBtns).on('click', function (e) {
+    this.btnOk = $('<button type="button" class="btn btn-sm btn-primary"/>').text('OK').appendTo(this.divBtns).on('click', function (e) {
         e.stopPropagation();
-        self.close(false);
         if (onSelect) { // callback when OK is pressed
             let selectedItems = Object.entries(self.selection).filter(([code, {active}]) => active).map(([code, _]) => code);
-            onSelect(selectedItems);
+            onSelect(selectedItems) && self.close(false);
         }
     });
 
@@ -85,6 +95,13 @@ function MultipleSelect(container, items, initial, onSelect) {
 
 MultipleSelect.prototype.doSelectAll = function (allState) {
     Object.values(this.selection).forEach((selItm) => selItm.select(allState));
+    if (allState) {
+        this.btnAll.removeClass('btn-outline-secondary').addClass('btn-primary');
+        this.btnNone.removeClass('btn-primary').addClass('btn-outline-secondary');
+    } else {
+        this.btnNone.removeClass('btn-outline-secondary').addClass('btn-primary');
+        this.btnAll.removeClass('btn-primary').addClass('btn-outline-secondary');
+    }
 }
 
 MultipleSelect.prototype.open = function () {
@@ -116,15 +133,15 @@ MultipleSelect.prototype.close = function (reset) {
     }
 };
 
-function loadMultipleSelectFilter(baseQuery, noItemsQuery, containerId, items, selected) {
+function loadMultipleSelectFilter(baseQuery, noItemsQuery, lookup, containerId, items, selected) {
     let container = $(containerId);
-    let ms = MultipleSelect(container, items, selected, function (newSelected) {
+    let ms = new MultipleSelect(container, items, selected, function (newSelected) {
         // construct query string based on selection
         if (newSelected.length == items.length) {
             window.location = window.location.pathname + baseQuery; // no filter (show all)
         } else if (newSelected.length > 0) {
             let amp = baseQuery === '?' ? '' : '&';
-            window.location = window.location.pathname + baseQuery + amp + newSelected.join(',');
+            window.location = window.location.pathname + baseQuery + amp + lookup + '=' + newSelected.join(',');
         } else {
             window.location = window.location.pathname + noItemsQuery; // filter for only null values
         }
@@ -149,4 +166,19 @@ function loadNumericRangeFilter(containerId, baseQuery, lookupGte, lookupLte) {
         e.preventDefault();
         window.location = window.location.pathname + baseQuery;
     })
+}
+
+/* from django-admin-rangefilter */
+function filter_apply(event, qs_name){
+    event.preventDefault();
+    const $form = django.jQuery(event.target).closest('form');
+    const query_string = $form.find('input#'+qs_name).val();
+    const form_data = $form.serialize();
+    const amp = query_string === "?" ? "" : "&";  // avoid leading ?& combination
+    window.location = window.location.pathname + query_string + amp + form_data;
+}
+function filter_reset(event, qs_name){
+    const $form = django.jQuery(event.target).closest('form');
+    const query_string = $form.find('input#' + qs_name).val();
+    window.location = window.location.pathname + query_string;
 }

@@ -5,6 +5,7 @@ from django.contrib.admin.utils import prepare_lookup_value, quote, unquote
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.contrib.admin.templatetags import admin_list
 from django.utils.safestring import mark_safe 
+from django.core.exceptions import ValidationError
 
 class MyListFilter(ListFilter):
     field_spec = None
@@ -132,9 +133,10 @@ class ChoicesMultipleSelectFilter(FieldListFilter):
     Choice-based multiple selection filter where rows are filtered out which
     do not match ANY of the selected values.
     """
+    template = 'admin/multiple_filter.html'
     def __init__(self, field, request, params, model, model_admin, field_path):
         # adapted from django.contrib.admin.filters.ChoicesFieldListFilter 
-        self.lookup_kwarg = "%s__exact" % field_path
+        self.lookup_kwarg = "%s__in" % field_path
         self.lookup_kwarg_isnull = "%s__isnull" % field_path
         self.lookup_val = params.get(self.lookup_kwarg)
         self.lookup_val_isnull = params.get(self.lookup_kwarg_isnull)
@@ -150,9 +152,24 @@ class ChoicesMultipleSelectFilter(FieldListFilter):
             if lookup is None:
                 continue
             yield {
-                'code': lookup,
+                'code': quote(lookup),
                 'display': title,
             }
+
+    def queryset(self, request, queryset):
+        try:
+            if self.lookup_kwarg in self.used_parameters:
+                filter_selection = [
+                    unquote(item) for item in self.used_parameters[self.lookup_kwarg]
+                ]
+                queryset = queryset.filter(**{self.lookup_kwarg: filter_selection})
+            if self.lookup_kwarg_isnull in self.used_parameters:
+                queryset = queryset.filter(**{self.lookup_kwarg_isnull: self.used_parameters[self.lookup_kwarg_isnull]})
+            return queryset
+        except (ValueError, ValidationError) as e:
+            # Fields may raise a ValueError or ValidationError when converting
+            # the parameters to the correct type.
+            raise IncorrectLookupParameters(e)
 
     def null_query_string(self):
         return self.changelist.get_query_string({self.lookup_kwarg_isnull: "True"}, [self.lookup_kwarg])
@@ -160,4 +177,19 @@ class ChoicesMultipleSelectFilter(FieldListFilter):
     def base_query_string(self):
         return self.changelist.get_query_string(remove=self.expected_parameters())
 
-    
+    @property
+    def selected(self):
+        selected_items = self.used_parameters.get(self.lookup_kwarg)
+        isnull = self.used_parameters.get(self.lookup_kwarg_isnull)
+
+        if isnull:
+            return set()
+
+        sel_actual = set()
+        for lookup, title in self.field.flatchoices:
+            if lookup is None:
+                continue
+            lookup = quote(lookup)
+            if selected_items is None or lookup in selected_items:
+                sel_actual.add(lookup)
+        return sel_actual

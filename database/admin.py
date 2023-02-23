@@ -21,7 +21,7 @@ from django_admin_listfilter_dropdown.filters import (
 from django.db import models
 
 from database.admin_site import admin_site # Custom admin site
-from database.filters import TwoNumbersInRangeFilter
+from database.filters import TwoNumbersInRangeFilter, ChoicesMultipleSelectFilter
 
 # Hide the groups from the admin site
 admin_site.unregister(Group)
@@ -112,16 +112,16 @@ class BaseStudiesAdmin(ViewModelAdmin):
 
     list_filter = (
         ('Study_group', ChoiceDropdownFilter), 
-        ('Disease', ChoiceDropdownFilter),
+        ('Disease', ChoicesMultipleSelectFilter),
         ('Year', NumericRangeFilter),
         ('Study_design', ChoiceDropdownFilter),
-        ('Diagnosis_method', ChoiceDropdownFilter),
-        ('Data_source', ChoiceDropdownFilter),
-        ('Surveillance_setting', ChoiceDropdownFilter),
-        ('Clinical_definition_category', ChoiceDropdownFilter),
-        ('Coverage', ChoiceDropdownFilter),
-        ('Climate', ChoiceDropdownFilter),
-        ('Aria_remote', ChoiceDropdownFilter),
+        ('Diagnosis_method', ChoicesMultipleSelectFilter),
+        ('Data_source', ChoicesMultipleSelectFilter),
+        ('Surveillance_setting', ChoicesMultipleSelectFilter),
+        ('Clinical_definition_category', ChoicesMultipleSelectFilter),
+        ('Coverage', ChoicesMultipleSelectFilter),
+        ('Climate', ChoicesMultipleSelectFilter),
+        ('Aria_remote', ChoicesMultipleSelectFilter),
     )
 
     checkbox_template = 'database/data/study_row_header.html'
@@ -235,23 +235,23 @@ class BaseResultsAdmin(ViewModelAdmin):
     list_filter = (
         # Methods-related filters
         ('Study__Study_group', ChoiceDropdownFilter), # hierarchy Study_group -> Disease as sub-category
-        ('Study__Disease', ChoiceDropdownFilter), # multiple select within Study_group options
+        ('Study__Disease', ChoicesMultipleSelectFilter), # multiple select within Study_group options
         ('Study__Year', NumericRangeFilter), # standard number range (inclusive)
         ('Study__Study_design', ChoiceDropdownFilter), # single select
-        ('Study__Diagnosis_method', ChoiceDropdownFilter), # multiple select
-        ('Study__Data_source', ChoiceDropdownFilter), # multiple select
-        ('Study__Surveillance_setting', ChoiceDropdownFilter), # multiple select
-        ('Study__Clinical_definition_category', ChoiceDropdownFilter), # multiple select
-        ('Study__Coverage', ChoiceDropdownFilter), # multiple select
-        ('Study__Climate', ChoiceDropdownFilter), # multiple select
-        ('Study__Aria_remote', ChoiceDropdownFilter), # multiple select
+        ('Study__Diagnosis_method', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Data_source', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Surveillance_setting', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Clinical_definition_category', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Coverage', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Climate', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Aria_remote', ChoicesMultipleSelectFilter), # multiple select
 
         # Result-specific filters
-        ('Age_general', ChoiceDropdownFilter), # multiple select
-        ('Population_gender', ChoiceDropdownFilter), # multiple select
-        ('Indigenous_population', ChoiceDropdownFilter), # multiple select
+        ('Age_general', ChoicesMultipleSelectFilter), # multiple select
+        ('Population_gender', ChoicesMultipleSelectFilter), # multiple select
+        ('Indigenous_population', ChoicesMultipleSelectFilter), # multiple select
         ('Country', DropdownFilter), # single select hierarchy Country -> Jurisdiction
-        ('Jurisdiction', DropdownFilter), # multiple select from distinct values only with matching Country
+        ('Jurisdiction', ChoicesMultipleSelectFilter), # multiple select from distinct values only with matching Country
         (TwoNumbersInRangeFilter.create('Observation dates (year)', ('Year_start', 'Year_stop'))), # single filter for entire start/stop range (inclusive of partial range overlaps)
         #('Year_stop', NumericRangeFilter),
         ('Proportion', DropdownFilter), # single select

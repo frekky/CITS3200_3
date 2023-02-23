@@ -3,16 +3,25 @@
 #changelist {
     display: flex;
     align-items: flex-start;
+    flex-direction: column;
     justify-content: space-between;
 }
 
 #changelist .changelist-form-container {
     flex: 1 1 auto;
     min-width: 0;
+    width: 100%;
 }
 
+#changelist #result_list,
 #changelist table {
     width: 100%;
+}
+
+#changelist #result_list {
+    width: 100%;
+    table-layout: fixed;
+    word-wrap: break-word;
 }
 
 .change-list .hiddenfields { display:none; }
@@ -35,7 +44,6 @@
 }
 
 #changelist-form .results {
-    overflow-x: auto;
     width: 100%;
 }
 
@@ -133,23 +141,33 @@
 /* FILTER COLUMN */
 
 #changelist-filter {
-    flex: 0 0 240px;
-    order: 1;
+    overflow-x: scroll;
     background: var(--darkened-bg);
     border-left: none;
-    margin: 0 0 0 30px;
+    margin: 0;
 }
 
-#changelist-filter h2 {
+#changelist-filter-header h2 {
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     padding: 5px 15px;
-    margin-bottom: 12px;
+    /*margin-bottom: 12px;*/
     border-bottom: none;
 }
 
+#changelist-filter-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0;
+    margin-bottom: 12px;
+}
+
+#changelist-filter-header > * {
+    display: inline-block;
+}
+
 #changelist-filter h3,
+#changelist-filter-toolbar h3,
 #changelist-filter details summary {
     font-weight: 400;
     padding: 0 15px;

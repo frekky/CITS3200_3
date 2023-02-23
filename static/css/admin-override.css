@@ -188,30 +188,40 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     left: 0;
 }
 
+#changelist-filter .numericrangefilter {
+    border-bottom: 1px solid var(--hairline-color);
+}
+
+#changelist-filter .dropdown-filter {
+    border-bottom: 1px solid var(--hairline-color);
+}
+
+#changelist-filter ul {
+    margin-bottom: 0;
+}
 
 /* Multiple select CSS */
-.multiple-select {
+#changelist-filter .multiple-select {
     display: inline-block;
-    border: 1px solid lightblue;
-    padding: 6px;
-    border-radius: 22px;
+    margin: 0 0 -3px 0;
     overflow: hidden;
-    list-style-type: none;
-    padding: 10px;
+    background-color: white;
+}
+
+.multiple-select.collapsed:not(.empty):not(.full) {
+    padding: 0.25rem 0.375rem;
 }
 
 .multiple-select.empty::before {
     content: 'None';
-    font-weight: bold;
 }
 
 .multiple-select.full::before {
     content: 'All';
-    font-weight: bold;
 }
 
-.multiple-select.collapsed.full li.item.selected,
-.multiple-select.collapsed.empty li.item.selected {
+.multiple-select.collapsed.full .item.selected-item,
+.multiple-select.collapsed.empty .item.selected-item {
     display: none;
 }
 
@@ -219,23 +229,29 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     background-color: lightskyblue;
 }
 
-.multiple-select li.item:first-of-type {
+.multiple-select .item:first-of-type {
     border: none;
 }
 
-.multiple-select li.item {
+.multiple-select .item {
     cursor: pointer;
-    padding: 3px;
+    padding: 4px;
+    margin: 0;
     border-top: 1px solid lightcyan;
+    user-select: none;
+    font-size: 90%;
 }
 
-.multiple-select.collapsed li.item.selected {
+.multiple-select.collapsed .item.selected-item {
     display: inline-block;
     border: 1px solid lightblue;
     background-color: lightcyan;
     border-radius: 10px;
     margin: 2px;
+    font-size: 80%;
+    line-height: 1.1;
 }
+
 
 .multiple-select.collapsed .icon {
     display: none;
@@ -243,22 +259,52 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 
 .multiple-select:not(.collapsed) .icon {
     margin-right: 4px;
+    font-size: 110%;
+    font-weight: bold;
 }
 
-.multiple-select:not(.collapsed) li.item:hover {
+.multiple-select:not(.collapsed) .item:hover {
     background-color: azure;
 }
 
-.multiple-select:not(.collapsed) li.item.selected {
+.multiple-select:not(.collapsed) .item.selected-item {
     background-color: lightskyblue;
 }
 
-.multiple-select.collapsed li.item:not(.selected) {
+.multiple-select.collapsed .item:not(.selected-item) {
     display: none;
 }
-.multiple-select.collapsed li.buttons {
+.multiple-select.collapsed .buttons {
     display: none;
 }
 .multiple-select:not(.collapsed) .title {
     display: none;
+}
+
+/* from django-admin-rangefilter */
+.numericrangefilter .button, .numericrangefilter input[type=submit], .numericrangefilter input[type=button], .numericrangefilter .submit-row input, .numericrangefilter a.button,
+.numericrangefilter .button, .numericrangefilter input[type=reset] {
+    background: var(--button-bg);
+    padding: 4px 5px;
+    border: none;
+    border-radius: 4px;
+    color: var(--button-fg);
+    cursor: pointer;
+}
+.numericrangefilter {
+    padding-left: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+.numericrangefilter p {
+    padding-left: 0px;
+    display: inline;
+}
+.numericrangefilter p input {
+    margin-bottom: 10px;
+    width: 70px;
+}
+
+.numericrangefilter > h3 {
+    padding: 0 !important;
 }

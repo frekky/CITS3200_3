@@ -37,7 +37,7 @@ def format_bool_charfield(value):
 def get_field_descriptions(model):
     fdesc = []
     for field in model._meta.get_fields():
-        if field.name in ('Created_time', 'Updated_time', 'Approved_time', 'Created_by', 'Approved_by'):
+        if field.name in ('Created_time', 'Updated_time', 'Approved_time', 'Created_by', 'Approved_by', 'Submission_status'):
             continue
 
         if isinstance(field, fields.reverse_related.ManyToOneRel):
@@ -160,7 +160,8 @@ def import_csv_studies_row(row, import_source):
         Import_source = import_source,
         Created_by = import_source.Imported_by,
         Approved_by = import_source.Imported_by,
-        Approved_time = import_source.Import_time
+        Approved_time = import_source.Import_time,
+        Submission_status = 'approved',
     )
 
     field_errors = []
@@ -184,7 +185,8 @@ def import_csv_results_row(row, import_source):
         Import_source = import_source,
         Created_by = import_source.Imported_by,
         Approved_by = import_source.Imported_by,
-        Approved_time = import_source.Import_time
+        Approved_time = import_source.Import_time,
+        Submission_status = 'approved',
     )
 
     field_errors = []

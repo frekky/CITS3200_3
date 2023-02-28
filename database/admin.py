@@ -10,10 +10,7 @@ from django.urls import reverse
 from rangefilter.filters import NumericRangeFilter
 from admin_action_buttons.admin import ActionButtonsMixin
 
-from database.models import (
-    Users, ApprovedStudies, ApprovedResults, 
-    PendingStudies, PendingResults,
-    ImportSource, Document)
+from database.models import *
 
 from .actions import download_as_csv
 from django_admin_listfilter_dropdown.filters import (
@@ -74,7 +71,7 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
         # Store request hack: from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
         self.request = request
         return qs
-           
+    
     # save email of user that's adding studies/results
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
@@ -96,9 +93,54 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
             'user': self.request.user,
             'model_name': obj._meta.model_name,
         })
-   
-class BaseStudiesAdmin(ViewModelAdmin):
-    #inlines = [ResultsInline]
+
+class ResultsAdminMixin:
+    @admin.display(ordering='Study__Paper_title', description='Study details')
+    def get_study_info_html(self, obj):
+        return render_to_string('database/data/result_study_info.html', context={'row': obj})
+
+    @admin.display(ordering='Study__Study_group', description='Method details')
+    def get_method_info_html(self, obj):
+        return render_to_string('database/data/result_method_info.html', context={'row': obj})
+
+    @admin.display(description='Population', ordering='Population_indigenous')
+    def get_population_html(self, obj):
+        return render_to_string('database/data/result_population_info.html', context={'row': obj})
+
+    @admin.display(description='Geographic Info', ordering='Specific_location')
+    def get_location_html(self, obj):
+        return render_to_string('database/data/result_location_info.html', context={'row': obj})
+
+    @admin.display(description='Flags')
+    def get_flags_html(self, obj):
+        return render_to_string('database/data/row_flags.html', context={'row': obj})
+
+    @admin.display(description='Point Estimate')
+    def get_point_estimate_html(self, obj):
+        return render_to_string('database/data/result_point_estimate.html', context={'row': obj})
+    
+    @admin.action(description='Goto Studies for Selection')
+    def view_parent_studies(self, request, queryset):
+        study_ids = set()
+        for result in queryset:
+            study_ids.add(result.Study_id)
+
+        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_id_list))
+
+class ReadonlyResultsInline(ResultsAdminMixin, admin.TabularInline):
+    model = ResultsModel
+    fields = readonly_fields = (
+        'get_study_info_html',
+        'get_method_info_html',
+        'get_population_html',
+        'get_location_html',
+        'get_flags_html',
+        'get_point_estimate_html',
+    )
+
+@admin.register(ProxyApprovedStudies)
+class BaseStudiesModelAdmin(ViewModelAdmin):
+    inlines = [ReadonlyResultsInline]
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
     list_display = (
@@ -134,11 +176,11 @@ class BaseStudiesAdmin(ViewModelAdmin):
 
     search_help_text = 'Search titles, study descriptions, data source names, location, or Other Points for matching keywords. Put quotes around search terms to find exact phrases only.'
 
-    @admin.display(ordering='Study_description', description='Study Details')
+    @admin.display(ordering='Paper_title', description='Study Details')
     def get_publication_html(self, obj):
         return render_to_string('database/data/study_publication_info.html', context={'row': obj})
 
-    @admin.display(description='Geography', ordering='Coverage')
+    @admin.display(description='Geography')
     def get_location_html(self, obj):
         return render_to_string('database/data/study_geography_info.html', context={'row': obj})
 
@@ -146,7 +188,7 @@ class BaseStudiesAdmin(ViewModelAdmin):
     def get_method_html(self, obj):
         return render_to_string('database/data/study_method_info.html', context={'row': obj})
 
-    @admin.display(description='Notes', ordering='Limitations_identified')
+    @admin.display(description='Notes')
     def get_notes_html(self, obj):
         return render_to_string('database/data/study_notes.html', context={'row': obj})
 
@@ -218,7 +260,8 @@ class BaseStudiesAdmin(ViewModelAdmin):
             filename = 'StrepA-Methods-Backup'
         )
 
-class BaseResultsAdmin(ViewModelAdmin):
+@admin.register(ProxyApprovedResults)
+class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
     list_display = (
@@ -260,46 +303,12 @@ class BaseResultsAdmin(ViewModelAdmin):
 
     actions = ['view_parent_studies', 'export_merged_csv', 'export_backup_csv', 'delete_selected']
 
-    ordering = ('-Study__Study_group', )    
+    ordering = ('-Study__Paper_title', )    
 
     search_fields = ('Study__Paper_title', 'Measure', 'Specific_location')
     search_help_text = 'Search Study Titles, Measure, and Specific Location for matching keywords. Put quotes around search terms to find exact phrases only.'
 
     checkbox_template = 'database/data/result_row_header.html'
-
-    ## For the sake of sensible people make sure the ordering matches the FIRST item that appears in each cell ##
-
-    @admin.display(ordering='Study__Paper_title', description='Study details')
-    def get_study_info_html(self, obj):
-        return render_to_string('database/data/result_study_info.html', context={'row': obj})
-
-    @admin.display(ordering='Study__Study_group', description='Method details')
-    def get_method_info_html(self, obj):
-        return render_to_string('database/data/result_method_info.html', context={'row': obj})
-
-    @admin.display(description='Population', ordering='Population_indigenous')
-    def get_population_html(self, obj):
-        return render_to_string('database/data/result_population_info.html', context={'row': obj})
-
-    @admin.display(description='Geographic Info', ordering='Specific_location')
-    def get_location_html(self, obj):
-        return render_to_string('database/data/result_location_info.html', context={'row': obj})
-
-    @admin.display(description='Flags')
-    def get_flags_html(self, obj):
-        return render_to_string('database/data/row_flags.html', context={'row': obj})
-
-    @admin.display(description='Point Estimate')
-    def get_point_estimate_html(self, obj):
-        return render_to_string('database/data/result_point_estimate.html', context={'row': obj})
-    
-    @admin.action(description='Goto Studies for Selection')
-    def view_parent_studies(self, request, queryset):
-        study_ids = set()
-        for result in queryset:
-            study_ids.add(result.Study_id)
-
-        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_id_list))
 
     @admin.action(description='Export Selected to CSV')
     def export_merged_csv(self, request, queryset):
@@ -391,19 +400,20 @@ class BaseResultsAdmin(ViewModelAdmin):
             filename = 'StrepA-Results-Backup',
         )
 
-@admin.register(ApprovedStudies)
-class ApprovedStudiesAdmin(BaseStudiesAdmin):
+class ResultsSubmissionInline(admin.TabularInline):
+    model = ResultsModel
+
+class BaseSubmissionsModelAdmin(BaseStudiesModelAdmin):
     pass
 
-@admin.register(PendingStudies)
-class PendingStudiesAdmin(BaseStudiesAdmin):
+@admin.register(ProxyUserSubmissions)
+class ViewMySubmissions(BaseSubmissionsModelAdmin):
     pass
 
-@admin.register(ApprovedResults)
-class ApprovedResultsAdmin(BaseResultsAdmin):
+@admin.register(ProxyUserDrafts)
+class EditMyDrafts(BaseSubmissionsModelAdmin):
     pass
 
-@admin.register(PendingResults)
-class PendingResultsAdmin(BaseResultsAdmin):
+@admin.register(ProxyPendingSubmissions)
+class AdminViewPendingSubmissions(BaseSubmissionsModelAdmin):
     pass
-

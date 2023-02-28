@@ -67,6 +67,19 @@ class Users(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
 
+class Document(models.Model):
+    class Meta:
+        verbose_name = 'User Guide Document'
+    
+    title = models.CharField(max_length=100, help_text="Title of download button shown to users on website home screen")
+    upload_file = models.FileField(
+        upload_to = 'documents/',
+    )
+    all_users = models.BooleanField(blank=True, verbose_name = 'Visible to all users', help_text="Whether all users can access this document or if it is only visible to administrators.")
+
+    def __str__(self):
+        return self.title
+
 class ImportSource(models.Model):
     class Meta:
         verbose_name = 'Imported Datasets'
@@ -74,7 +87,11 @@ class ImportSource(models.Model):
 
     Source_file = models.FileField(upload_to='uploads/imports/%Y/%m/%d/')
     Original_filename = models.CharField(max_length=255, blank=True)
-    Import_type = models.CharField(max_length=20, blank=True)
+    Import_type = models.CharField(max_length=20, blank=True, choices=[
+        ('studies', 'Studies/Methods CSV file with Unique_identifier'),
+        ('results', 'Results CSV file with link Results_ID=Unique_identifier'),
+        ('studies+results', 'Merged Methods and Results CSV file'),
+    ])
     Row_count = models.PositiveIntegerField(null=True)
     Import_time = models.DateTimeField(auto_now_add=True)
     Imported_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True)
@@ -101,10 +118,15 @@ class MyModel(models.Model):
     Created_time = models.DateTimeField(auto_now_add=True)
     Created_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Submitted by user', related_name='+')
     Updated_time = models.DateTimeField(auto_now=True)
+    Submission_status = models.CharField(max_length=20, choices=[
+        ('draft', 'Draft'),
+        ('pending', 'Pending admin review'),
+        ('approved', 'Approved for publication'),
+        ('needs_review', 'Further review requested by admin'),
+    ])
+    Submission_notes = models.TextField(blank=True, help_text='Any notes relating to the submission process, from the contributor to the reviewer, and/or from the reviewing admin to the contributor.')
     Approved_time = models.DateTimeField(null=True, blank=True)
-    Approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Verified by user', related_name='+')
-
-    objects = FilteredManager(filter_args={'Approved_by__isnull': False})
+    Approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Reviewed by', related_name='+')
 
     @property
     def pending(self):
@@ -409,7 +431,7 @@ class StudiesModel(MyModel):
     def get_view_study_results_url(cls, study_id_list):
         if 'pending' in cls._meta.model_name:
             return None
-        return reverse('admin:database_results_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_id_list)
+        return reverse('admin:database_proxyapprovedresults_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_id_list)
 
     @property
     def view_study_results_url(self):
@@ -677,64 +699,51 @@ class ResultsModel(MyModel):
     def get_view_results_studies_url(cls, study_id_list):
         if 'pending' in cls._meta.model_name:
             return None
-        return reverse('admin:database_studies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_id_list)
+        return reverse('admin:database_proxyapprovedstudies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_id_list)
 
     def __str__(self):
         if not self.Study:
             return "%sBurden: %s" % ('[Pending Approval] ' if self.pending else '', self.Point_estimate, )
         return '%s%s (Burden: %s)' % ('[Pending Approval] ' if self.pending else '', self.Study.Study_description if self.Study.Study_description else self.Study.Unique_identifier, self.Point_estimate)
 
-def proxy_model_factory(model, verbose_name, name=None, filter_args={}):
-    name = name or ('_'.join('%s.%s' % (k.replace('_', ''), v) for k, v in filter_args.items()) + '_' + model._meta.model_name)
+# Additional proxy models here, for the various stages of submission/approval
+# Proxy models are only needed just to allow more ModelAdmins registered in admin for the same model (it's a Django admin site limitation)
+class ProxyApprovedStudies(StudiesModel):
+    class Meta:
+        proxy = True
+        verbose_name = 'Study with Method Details'
+        verbose_name_plural = 'Studies/Methods'
+    
+    objects = FilteredManager(filter_args={'Submission_status__exact': 'approved'})
 
-    meta = type('Meta', (), {
-        'proxy': True,
-        'verbose_name': verbose_name,
-        'verbose_name_plural': verbose_name,
-    })
+class ProxyApprovedResults(ResultsModel):
+    class Meta:
+        proxy = True
+        verbose_name = 'Strep A. Point Estimate Result'
+        verbose_name_plural = 'Strep A. Point Estimate Results'
 
-    cls = type(name, (model, ), {
-        '__module__': __name__,
-        'Meta': meta,
-        'objects': FilteredManager(filter_args=filter_args),
-    })
+    objects = FilteredManager(filter_args={'Submission_status__exact': 'approved'})
 
-    return cls
+class ProxyUserSubmissions(StudiesModel):
+    class Meta:
+        proxy = True
+        verbose_name = 'Submitted Study with Method Details and Point Estimates'
+        verbose_name_plural = 'My Submissions'
 
-ApprovedStudies = proxy_model_factory(
-    StudiesModel,
-    'Studies',
-    name = 'studies',
-    filter_args = {'Approved_by__isnull': False}
-)
+    objects = FilteredManager(filter_args={'Submission_status__in': ['pending', 'needs_review', 'approved'], 'Import_source__isnull': True})
 
-ApprovedResults = proxy_model_factory(
-    ResultsModel,
-    'Results',
-    name = 'results',
-    filter_args = {'Approved_by__isnull': False}
-)
+class ProxyUserDrafts(StudiesModel):
+    class Meta:
+        proxy = True
+        verbose_name = 'Draft Study with Method Details and Point Estimates'
+        verbose_name_plural = 'My Draft Submissions'
 
-PendingStudies = proxy_model_factory(
-    StudiesModel,
-    'Studies (Pending Approval)',
-    name = 'studies_pending',
-    filter_args = {'Approved_by__isnull': True},
-)
+    objects = FilteredManager(filter_args={'Submission_status__exact': 'draft'})
 
-PendingResults = proxy_model_factory(
-    ResultsModel,
-    'Results (Pending Approval)',
-    name = 'results_pending',
-    filter_args = {'Approved_by__isnull': True},
-)
+class ProxyPendingSubmissions(StudiesModel):
+    class Meta:
+        proxy = True
+        verbose_name = 'User-Submitted Study with Method Details and Point Estimates'
+        verbose_name_plural = 'User Submissions Pending Review'
 
-class Document(models.Model):
-    title = models.CharField(max_length=100, help_text="Title of download button shown to users on website home screen")
-    upload_file = models.FileField(
-        upload_to = 'documents/',
-    )
-    all_users = models.BooleanField(blank=True, verbose_name = 'Visible to all users', help_text="Whether all users can access this document or if it is only visible to administrators.")
-
-    def __str__(self):
-        return self.title
+    objects = FilteredManager(filter_args={'Submission_status__exact': 'pending'})

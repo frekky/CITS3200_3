@@ -172,10 +172,10 @@ class ChoicesMultipleSelectFilter(FieldListFilter):
             raise IncorrectLookupParameters(e)
 
     def null_query_string(self):
-        return self.changelist.get_query_string({self.lookup_kwarg_isnull: "True"}, [self.lookup_kwarg])
+        return mark_safe(self.changelist.get_query_string({self.lookup_kwarg_isnull: "True"}, [self.lookup_kwarg]).replace('"', '""'))
 
     def base_query_string(self):
-        return self.changelist.get_query_string(remove=self.expected_parameters())
+        return mark_safe(self.changelist.get_query_string(remove=self.expected_parameters()).replace('"', '""'))
 
     @property
     def selected(self):

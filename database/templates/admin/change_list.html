@@ -57,36 +57,37 @@
         {{ cl.formset.non_form_errors }}
     {% endif %}
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+      <div class="changelist-form-container">
+        {% block search %}{% search_form cl %}{% endblock %}
+        {% block date_hierarchy %}{% if cl.date_hierarchy %}{% date_hierarchy cl %}{% endif %}{% endblock %}
+      </div>
       {% block filters %}
       {% if cl.has_filters %}
         <details data-filter-title="changelist-filters-{{ cl.opts.app_label }}-{{ cl.opts.verbose_name }}" id="changelist-filter-toolbar" open>
           <summary id="changelist-filter-header">
-            <h2>{% translate 'Filters' %}</h2>
+            <h2>{% translate 'Filter' %}</h2>
             {% if cl.has_active_filters %}<h3 id="changelist-filter-clear">
               <a href="{{ cl.clear_all_filters_qs }}">&#10006; {% translate "Clear all filters" %}</a>
             </h3>{% endif %}
           </summary>
-          <div id="changelist-filter" class="row">
-            {% for spec in cl.filter_specs %}<div class="filter col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">{% admin_list_filter cl spec %}</div>{% endfor %}
+          <div id="changelist-filter" class="row g-0">
+            {% for spec in cl.filter_specs %}<div class="filter col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2 col-xxl-1">{% admin_list_filter cl spec %}</div>{% endfor %}
           </div>
         </details>
       {% endif %}
       {% endblock %}
       <div class="changelist-form-container">
-        {% block search %}{% search_form cl %}{% endblock %}
-        {% block date_hierarchy %}{% if cl.date_hierarchy %}{% date_hierarchy cl %}{% endif %}{% endblock %}
-
         <form id="changelist-form" method="post"{% if cl.formset and cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>{% csrf_token %}
-        {% if cl.formset %}
-          <div>{{ cl.formset.management_form }}</div>
-        {% endif %}
-
-        {% block result_list %}
-          {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
-          {% result_list cl %}
-          {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
-        {% endblock %}
-        {% block pagination %}{% pagination cl %}{% endblock %}
+          {% if cl.formset %}
+            <div>{{ cl.formset.management_form }}</div>
+          {% endif %}
+  
+          {% block result_list %}
+            {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+            {% result_list cl %}
+            {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+          {% endblock %}
+          {% block pagination %}{% pagination cl %}{% endblock %}
         </form>
       </div>
     </div>

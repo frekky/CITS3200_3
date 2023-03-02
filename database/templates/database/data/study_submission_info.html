@@ -1,0 +1,26 @@
+<div class="rowdata">
+    <table>
+        <tbody>
+            <tr>
+                <th>Submitted by</th>
+                <td>
+                    {{ row.Created_by_name }}
+                </td>
+            </tr>
+            <tr>
+                <th>Submission time</th>
+                <td>
+                    {{ row.Created_time }}
+                </td>
+            </tr>
+            <tr>
+                <th>Submission status</th>
+                <td class="fw-bold">{{ row.Submission_status }}</td>
+            </tr>
+            <tr>
+                <th>Reviewed by</th>
+                <td>{{ row.Approved_by_name }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

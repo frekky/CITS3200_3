@@ -59,13 +59,55 @@ class DocumentAdmin(ActionButtonsMixin, ModelAdmin):
 # override default behaviour to allow viewing by anyone
 class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
     checkbox_template = None
+    all_can_view = True
+    owner_can_view = True
+    all_can_add = False
+    all_can_edit = False
+    owner_can_edit = False
+    no_add = False
+    no_edit = False
+    owner_can_delete = False
+    no_delete = False
 
     def has_view_permission(self, request, obj=None):
-        return request.user.is_active #and request.user.can_view_data
+        if self.all_can_view:
+            return True
+        if self.owner_can_view:
+            if obj is not None:
+                return request.user.pk == obj.Created_by_id
+            else:
+                return True
+
+        return request.user.is_superuser
 
     def has_add_permission(self, request, obj=None):
-        return request.user.is_active #and request.user.can_add_data
+        if self.no_add:
+            return False
+        return self.all_can_add or request.user.is_superuser
     
+    def has_change_permission(self, request, obj=None):
+        if self.no_edit:
+            return False
+        if self.all_can_edit:
+            return True
+        if self.owner_can_edit:
+            if obj is not None:
+                return request.user.pk == obj.Created_by_id
+            else:
+                return True
+            
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        if self.no_delete:
+            return False
+        if self.owner_can_delete:
+            if obj is not None:
+                return request.user.pk == obj.Created_by_id
+            else:
+                return True
+        return request.user.is_superuser
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # Store request hack: from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
@@ -138,7 +180,6 @@ class ReadonlyResultsInline(ResultsAdminMixin, admin.TabularInline):
         'get_point_estimate_html',
     )
 
-@admin.register(ProxyApprovedStudies)
 class BaseStudiesModelAdmin(ViewModelAdmin):
     inlines = [ReadonlyResultsInline]
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
@@ -260,7 +301,6 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
             filename = 'StrepA-Methods-Backup'
         )
 
-@admin.register(ProxyApprovedResults)
 class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
@@ -294,7 +334,7 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
         ('Population_gender', ChoicesMultipleSelectFilter), # multiple select
         ('Indigenous_population', ChoicesMultipleSelectFilter), # multiple select
         ('Country', DropdownFilter), # single select hierarchy Country -> Jurisdiction
-        ('Jurisdiction', ChoicesMultipleSelectFilter), # multiple select from distinct values only with matching Country
+        ('Jurisdiction', DropdownFilter), # multiple select from distinct values only with matching Country
         (TwoNumbersInRangeFilter.create('Observation dates (year)', ('Year_start', 'Year_stop'))), # single filter for entire start/stop range (inclusive of partial range overlaps)
         #('Year_stop', NumericRangeFilter),
         ('Proportion', DropdownFilter), # single select
@@ -400,20 +440,121 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
             filename = 'StrepA-Results-Backup',
         )
 
-class ResultsSubmissionInline(admin.TabularInline):
+@admin.register(Studies)
+class AllStudiesView(BaseStudiesModelAdmin):
+    all_can_view = True
+    no_add = True
+
+@admin.register(Results)
+class AllResultsView(BaseResultsModelAdmin):
+    all_can_view = True
+    no_add = True
+
+SUBMIT_HIDE_FIELDS = [
+    'Unique_identifier',
+    'Submission_status',
+    'Created_by',
+    'Approved_time',
+    'Approved_by',
+    'Import_source',
+]
+
+class ResultsSubmissionInline(admin.StackedInline):
     model = ResultsModel
 
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        for x in SUBMIT_HIDE_FIELDS:
+            if x in fields:
+                fields.remove(x)
+        fields.remove('Submission_notes')
+        return fields
+
 class BaseSubmissionsModelAdmin(BaseStudiesModelAdmin):
-    pass
+    inlines = [ResultsSubmissionInline]
 
-@admin.register(ProxyUserSubmissions)
+    list_display = (
+        'get_submission_html',
+        'get_publication_html',
+        'get_method_html',
+        'get_location_html',
+        'get_notes_html',
+    )
+
+    @admin.display(ordering='Created_time', description='Submission Details')
+    def get_submission_html(self, obj):
+        return render_to_string('database/data/study_submission_info.html', context={'row': obj})
+
+
+
+@admin.register(My_Submissions)
 class ViewMySubmissions(BaseSubmissionsModelAdmin):
-    pass
+    inlines = [ReadonlyResultsInline]
+    all_can_view = False
+    owner_can_view = True
+    no_add = True
+    no_edit = True
+    no_delete = True
 
-@admin.register(ProxyUserDrafts)
+    #actions = [*BaseSubmissionsModelAdmin.actions, 'copy_to_draft']
+
+    @admin.action(description='Copy to new Draft')
+    def copy_to_draft(self, request, queryset):
+        """ clone results & studies objects to new draft """
+        pass
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.filter(Created_by__exact=request.user)
+
+@admin.register(My_Drafts)
 class EditMyDrafts(BaseSubmissionsModelAdmin):
-    pass
+    all_can_add = True
+    owner_can_view = True
+    owner_can_edit = True
+    owner_can_delete = True
 
-@admin.register(ProxyPendingSubmissions)
+    actions = [*BaseSubmissionsModelAdmin.actions, 'submit_for_review']
+    
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        for x in SUBMIT_HIDE_FIELDS:
+            if x in fields:
+                fields.remove(x)
+        return fields
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.filter(Created_by__exact=request.user)
+
+    def save_model(self, request, obj, form, change):
+        if obj.pk is None:
+            obj.Created_by = request.user
+            obj.Submission_status = 'draft'
+        
+        super().save_model(request, obj, form, change)
+    
+    @admin.action(description='Submit for Admin Review')
+    def submit_for_review(self, request, queryset):
+        num_rows = queryset.update(Submission_status='pending')
+        self.message_user(request, '%d studies marked for administrator review. '
+            'Please check "My Submissions" to see the review progress.' % num_rows)
+
+@admin.register(Pending_Submissions)
 class AdminViewPendingSubmissions(BaseSubmissionsModelAdmin):
-    pass
+    all_can_view = False
+    owner_can_view = False
+    owner_can_edit = False
+    no_delete = True
+
+    actions = [*BaseSubmissionsModelAdmin.actions, 'approve_study', 'reject_study']
+
+    @admin.action(description='Publish Selected Submissions')
+    def approve_study(self, request, queryset):
+        num_rows = queryset.update(Submission_status='approved', Approved_by=request.user, Approved_time=timezone.now())
+        self.message_user(request, '%d studies marked as approved.' % num_rows)
+
+    @admin.action(description='Dis-approve Selected Submissions')
+    def reject_study(self, request, queryset):
+        num_rows = queryset.update(Submission_status='needs_review', Approved_by=request.user, Approved_time=timezone.now())
+        self.message_user(request, '%d studies marked as requiring further review.' % num_rows)

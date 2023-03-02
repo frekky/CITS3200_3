@@ -2,8 +2,8 @@ from django.contrib import admin
 from .admin_views import import_data
 
 class StrepAAdminSite(admin.AdminSite):
-	site_header = 'Strep A Database'
-	site_title = 'Strep A Database'
+	site_header = 'Browse the Strep A Research Literature Database'
+	site_title = 'Strep A DB'
 	index_title = 'Database contents'
 
 	login_template = 'database/login.html'
@@ -22,10 +22,10 @@ class StrepAAdminSite(admin.AdminSite):
 		"""
 		ordering = {
 			"Users": '0',
-			"Studies (Pending Approval)": '1',
-			"Results (Pending Approval)": '2',
-			"Studies (Any Group)": '3',
-			"Results (Any Group)": '4'
+			"Studies/Methods": '1',
+			"Point Estimates": '2',
+			"My Draft Submissions": '3',
+			"My Submissions": '4'
 		}
 		app_dict = self._build_app_dict(request)
 		

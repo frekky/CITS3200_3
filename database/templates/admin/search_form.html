@@ -1,6 +1,10 @@
 {% load i18n static %}
 {% if cl.search_fields %}
-<div id="toolbar"><form id="changelist-search" method="get">
+<details data-filter-title="changelist-search-{{ cl.opts.app_label }}-{{ cl.opts.verbose_name }}" id="changelist-search-toolbar" open>
+<summary id="changelist-search-header">
+    <h2>{% translate 'Search' %}</h2>
+</summary>
+<form id="changelist-search" method="get">
 <div><!-- DIV needed for valid HTML -->
 <label for="searchbar"><img src="{% static "admin/img/search.svg" %}" alt="Search"></label>
 <input type="text" size="40" name="{{ search_var }}" value="{{ cl.query }}" id="searchbar" autofocus{% if cl.search_help_text %} aria-describedby="searchbar_helptext"{% endif %}>
@@ -13,8 +17,7 @@
 {% endfor %}
 </div>
 {% if cl.search_help_text %}
-<br class="clear">
 <div class="help" id="searchbar_helptext">{{ cl.search_help_text }}</div>
 {% endif %}
-</form></div>
+</form></details>
 {% endif %}

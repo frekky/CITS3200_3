@@ -83,7 +83,6 @@
 
 #toolbar {
     padding: 8px 10px;
-    margin-bottom: 15px;
     border-top: 1px solid var(--hairline-color);
     border-bottom: 1px solid var(--hairline-color);
     background: var(--darkened-bg);
@@ -129,6 +128,10 @@
     border-color: var(--body-quiet-color);
 }
 
+#changelist-search {
+    background: var(--darkened-bg);
+}
+
 #changelist-search img {
     vertical-align: middle;
     margin-right: 4px;
@@ -147,23 +150,32 @@
     margin: 0;
 }
 
-#changelist-filter-header h2 {
+#changelist-filter-header h2,
+#changelist-search-header h2 {
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     padding: 5px 15px;
-    /*margin-bottom: 12px;*/
     border-bottom: none;
 }
 
-#changelist-filter-header {
+#changelist-filter-header,
+#changelist-search-header {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0;
-    margin-bottom: 12px;
+    padding-left: 5px;
 }
 
-#changelist-filter-header > * {
+#changelist-filter-header > *,
+#changelist-search-header > * {
     display: inline-block;
+}
+
+#changelist-filter-toolbar,
+#changelist-search-toolbar {
+    width: 100%;
+    background-color: var(--primary);
+    color: var(--header-link-color);
 }
 
 #changelist-filter h3,
@@ -171,7 +183,6 @@
 #changelist-filter details summary {
     font-weight: 400;
     padding: 0 15px;
-    margin-bottom: 10px;
 }
 
 #changelist-filter details summary > * {
@@ -199,11 +210,10 @@
 #changelist-filter ul {
     margin: 5px 0;
     padding: 0 15px 15px;
-    border-bottom: 1px solid var(--hairline-color);
 }
 
-#changelist-filter ul:last-child {
-    border-bottom: none;
+#changelist-filter .filter {
+    border-bottom: 1px solid var(--hairline-color);
 }
 
 #changelist-filter li {

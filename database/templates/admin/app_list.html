@@ -17,12 +17,11 @@
             {% endif %}
             </th>
             {% if model.add_url %}
-              <td style="text-align: right;">
-                  {% if not model.object_name == 'ImportSource' %}
-                  <a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>
-                  {% endif %}
+              <td>
                   {% if request.user.is_superuser and model.object_name == 'ImportSource' %}
-                  <a href="{% url 'admin:import_data' %}" class="addlink">{% translate 'Add' %}</a>&nbsp;&nbsp;
+                  <a href="{% url 'admin:import_data' %}" class="addlink">{% translate 'Import Data' %}</a>
+                  {% else %}
+                  <a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>
                   {% endif %}
               </td>
             {% else %}
@@ -31,6 +30,8 @@
             {% if model.admin_url and show_changelinks %}
               {% if model.view_only %}
                 <td><a href="{{ model.admin_url }}" class="viewlink">{% translate 'View' %}</a></td>
+              {% elif model.object_name == 'Studies' or model.object_name == 'Results' or model.object_name == 'My_Submissions' %}
+                <td><a href="{{ model.admin_url }}" class="viewlink">{% translate 'View / Edit' %}</a></td>
               {% else %}
                 <td><a href="{{ model.admin_url }}" class="changelink">{% translate 'Change' %}</a></td>
               {% endif %}

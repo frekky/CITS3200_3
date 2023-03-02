@@ -121,38 +121,30 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     position: relative;
 }
 
-.model-results.change-list #result_list .column-get_study_info_html {
-    max-width: 25em;
-}
-
 .model-results.change-list #result_list .field-get_publication_html th {
     width: 7em;
-}
-
-.model-results.change-list #result_list .column-get_population_html {
-    min-width: 24em;
 }
 
 .model-results.change-list .field-get_population_html th {
     width: 7em;
 }
 
-.model-results.change-list #result_list .column-get_method_info_html {
-    min-width: 20%;
-}
-
 .model-results.change-list .field-get_method_info_html th {
     width: 11em;
 }
 
-.model-results.change-list #result_list .column-get_point_estimate_html {
-    width: 22em;
+.model-results.change-list #result_list .field-get_location_html th {
+    width: 6em;
+}
+.model-results.change-list #result_list .column-get_location_html {
+    width: 20em;
+}
+
+.model-results.change-list #result_list .column-get_flags_html {
+    width: 15em;
 }
 
 /* Studies list page column widths */
-.model-studies.change-list #result_list .column-get_publication_html {
-    max-width: 30em;
-}
 
 .model-studies.change-list #result_list .field-get_publication_html th {
     width: 8.5em;
@@ -166,9 +158,9 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     width: 7em;
 }
 
-.model-studies.change-list #result_list .column-get_method_html {
+/*.model-studies.change-list #result_list .column-get_method_html {
     min-width: 25%;
-}
+}*/
 
 .model-studies.change-list #result_list .field-get_method_html th {
     width: 11em;
@@ -186,14 +178,6 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     width: 100%;
     top: 0;
     left: 0;
-}
-
-#changelist-filter .numericrangefilter {
-    border-bottom: 1px solid var(--hairline-color);
-}
-
-#changelist-filter .dropdown-filter {
-    border-bottom: 1px solid var(--hairline-color);
 }
 
 #changelist-filter ul {
@@ -283,18 +267,19 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 
 /* from django-admin-rangefilter */
 .numericrangefilter .button, .numericrangefilter input[type=submit], .numericrangefilter input[type=button], .numericrangefilter .submit-row input, .numericrangefilter a.button,
-.numericrangefilter .button, .numericrangefilter input[type=reset] {
+.numericrangefilter .button, .numericrangefilter input[type=reset],
+.multiple-select .buttons input[type=button] {
     background: var(--button-bg);
     padding: 4px 5px;
     border: none;
     border-radius: 4px;
     color: var(--button-fg);
     cursor: pointer;
+    margin-right: 3px;
 }
 .numericrangefilter {
     padding-left: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
 }
 .numericrangefilter p {
     padding-left: 0px;
@@ -307,4 +292,9 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 
 .numericrangefilter > h3 {
     padding: 0 !important;
+}
+
+
+.closelink, .deletelink {
+    box-sizing: content-box;
 }

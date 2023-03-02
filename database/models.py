@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.conf import settings
 from django.urls import reverse
 from django.contrib.admin.utils import quote
-
+from django.utils import timezone
 
 class CustomAccountManager(BaseUserManager):
     
@@ -429,9 +429,9 @@ class StudiesModel(MyModel):
 
     @classmethod
     def get_view_study_results_url(cls, study_id_list):
-        if 'pending' in cls._meta.model_name:
+        if cls._meta.model_name == 'my_drafts' or cls._meta.model_name == 'my_submissions':
             return None
-        return reverse('admin:database_proxyapprovedresults_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_id_list)
+        return reverse('admin:database_results_changelist') + '?Study_id__in=' + ','.join(quote(str(id)) for id in study_id_list)
 
     @property
     def view_study_results_url(self):
@@ -451,6 +451,7 @@ class ResultsModel(MyModel):
         StudiesModel,
         on_delete = models.CASCADE,
         help_text = "Select or add the study where these results were published.",
+        related_name = 'results',
     )
 
     AGE_CHOICES = [
@@ -699,7 +700,7 @@ class ResultsModel(MyModel):
     def get_view_results_studies_url(cls, study_id_list):
         if 'pending' in cls._meta.model_name:
             return None
-        return reverse('admin:database_proxyapprovedstudies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_id_list)
+        return reverse('admin:database_studies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_id_list)
 
     def __str__(self):
         if not self.Study:
@@ -708,7 +709,9 @@ class ResultsModel(MyModel):
 
 # Additional proxy models here, for the various stages of submission/approval
 # Proxy models are only needed just to allow more ModelAdmins registered in admin for the same model (it's a Django admin site limitation)
-class ProxyApprovedStudies(StudiesModel):
+# Note that the Proxy Model class names are set up for the Admin Site URLs more than to follow Python/Django conventions
+class Studies(StudiesModel):
+    """ Approved Studies (for general display) """
     class Meta:
         proxy = True
         verbose_name = 'Study with Method Details'
@@ -716,15 +719,15 @@ class ProxyApprovedStudies(StudiesModel):
     
     objects = FilteredManager(filter_args={'Submission_status__exact': 'approved'})
 
-class ProxyApprovedResults(ResultsModel):
+class Results(ResultsModel):
     class Meta:
         proxy = True
-        verbose_name = 'Strep A. Point Estimate Result'
-        verbose_name_plural = 'Strep A. Point Estimate Results'
+        verbose_name = 'Point Estimate'
+        verbose_name_plural = 'Point Estimates'
 
     objects = FilteredManager(filter_args={'Submission_status__exact': 'approved'})
 
-class ProxyUserSubmissions(StudiesModel):
+class My_Submissions(StudiesModel):
     class Meta:
         proxy = True
         verbose_name = 'Submitted Study with Method Details and Point Estimates'
@@ -732,7 +735,7 @@ class ProxyUserSubmissions(StudiesModel):
 
     objects = FilteredManager(filter_args={'Submission_status__in': ['pending', 'needs_review', 'approved'], 'Import_source__isnull': True})
 
-class ProxyUserDrafts(StudiesModel):
+class My_Drafts(StudiesModel):
     class Meta:
         proxy = True
         verbose_name = 'Draft Study with Method Details and Point Estimates'
@@ -740,7 +743,7 @@ class ProxyUserDrafts(StudiesModel):
 
     objects = FilteredManager(filter_args={'Submission_status__exact': 'draft'})
 
-class ProxyPendingSubmissions(StudiesModel):
+class Pending_Submissions(StudiesModel):
     class Meta:
         proxy = True
         verbose_name = 'User-Submitted Study with Method Details and Point Estimates'

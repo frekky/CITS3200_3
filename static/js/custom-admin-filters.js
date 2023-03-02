@@ -18,12 +18,12 @@ function MultipleSelect(container, items, initial, onSelect) {
         }
     });
 
-    this.divSelectBtns = $('<div/>').addClass('buttons btn-group mb-1').appendTo(this.divOuter);
-    this.btnAll = $('<button type="button" class="btn btn-sm btn-primary me-1"/>').text('All').appendTo(this.divSelectBtns).on('click', (e) => {
+    this.divSelectBtns = $('<div/>').addClass('buttons mb-1').appendTo(this.divOuter);
+    this.btnAll = $('<input type="button"/>').val('All').appendTo(this.divSelectBtns).on('click', (e) => {
         e.stopPropagation();
         self.doSelectAll(true);
     });
-    this.btnNone = $('<button type="button" class="btn btn-sm btn-outline-secondary"/>').text('None').appendTo(this.divSelectBtns).on('click', (e) => {
+    this.btnNone = $('<input type="button"/>').val('None').appendTo(this.divSelectBtns).on('click', (e) => {
         e.stopPropagation();
         self.doSelectAll(false);
     });
@@ -78,12 +78,12 @@ function MultipleSelect(container, items, initial, onSelect) {
         this.divOuter.addClass('full');
     }
 
-    this.divBtns = $('<div/>').addClass('buttons btn-group mt-1').appendTo(this.divOuter);
-    this.btnCancel = $('<button type="button" class="btn btn-sm btn-secondary me-1"/>').text('Cancel').appendTo(this.divBtns).on('click', function (e) {
+    this.divBtns = $('<div/>').addClass('buttons mt-1').appendTo(this.divOuter);
+    this.btnCancel = $('<input type="button"/>').val('Cancel').appendTo(this.divBtns).on('click', function (e) {
         e.stopPropagation();
         self.close(true);
     });
-    this.btnOk = $('<button type="button" class="btn btn-sm btn-primary"/>').text('OK').appendTo(this.divBtns).on('click', function (e) {
+    this.btnOk = $('<input type="button" />').val('OK').appendTo(this.divBtns).on('click', function (e) {
         e.stopPropagation();
         if (onSelect) { // callback when OK is pressed
             let selectedItems = Object.entries(self.selection).filter(([code, {active}]) => active).map(([code, _]) => code);
@@ -95,13 +95,6 @@ function MultipleSelect(container, items, initial, onSelect) {
 
 MultipleSelect.prototype.doSelectAll = function (allState) {
     Object.values(this.selection).forEach((selItm) => selItm.select(allState));
-    if (allState) {
-        this.btnAll.removeClass('btn-outline-secondary').addClass('btn-primary');
-        this.btnNone.removeClass('btn-primary').addClass('btn-outline-secondary');
-    } else {
-        this.btnNone.removeClass('btn-outline-secondary').addClass('btn-primary');
-        this.btnAll.removeClass('btn-primary').addClass('btn-outline-secondary');
-    }
 }
 
 MultipleSelect.prototype.open = function () {

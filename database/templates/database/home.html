@@ -1,3 +1,4 @@
+{% load static %}
 {% extends "database/base.html" %}
 
 {% block title %} 
@@ -50,7 +51,7 @@ Home
 		{% endif %}
 	</div>
 	<div class="home-right">
-		<img src="static/img/v_asavi.png">
+		<img src="{% static '/img/v_asavi.png' %}">
 	</div>
 </div>
 {% endblock %}

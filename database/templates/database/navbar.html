@@ -12,11 +12,11 @@
 	<a class="navbar-brand" href="{% url 'home' %}">
 		<img src="{% static '/img/asavi_uwa_logo.png' %}" width="500">
 	</a>
-	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+	<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
 		<span class="navbar-toggler-icon"></span>
 	</button>
 	<div class="collapse navbar-collapse" id="navbarNav">
-		<ul class="navbar-nav me-3">
+		<ul class="navbar-nav me-3 align-items-center">
 			<li class="nav-item active">
 				<a class="nav-link" href="{% url 'home' %}">
 					Home
@@ -41,13 +41,23 @@
 			{% endif %}
 			{% if request.user.is_staff or request.user.is_superuser %}
 				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_users_changelist' %}">
-						Manage Users
+					<a class="nav-link" href="{% url 'admin:database_my_drafts_changelist' %}">
+						Drafts <span class="badge bg-primary">Admin</span>
 					</a>
 				</li>
 				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:index' %}">
-						Admin Site
+					<a class="nav-link" href="{% url 'admin:database_users_changelist' %}">
+						Users <span class="badge bg-primary">Admin</span>
+					</a>
+				</li>
+				<li class="nav-item me-2">
+					<a class="nav-link" href="{% url 'admin:database_document_changelist' %}">
+						Uploads <span class="badge bg-primary">Admin</span>
+					</a>
+				</li>
+				<li class="nav-item me-2">
+					<a class="nav-link" href="{% url 'admin:database_importsource_changelist' %}">
+						Data <span class="badge bg-primary">Admin</span>
 					</a>
 				</li>
 			{% endif %}

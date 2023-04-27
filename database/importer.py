@@ -196,6 +196,12 @@ def import_csv_results_row(row, import_source):
         # skip foreign key & auto fields
         if field in ('Results_ID', 'Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
             continue
+
+        if field == 'Point_estimate':
+            try:
+                value = "%0.2f" % float(value)
+            except ValueError:
+                pass
         
         value, ok = parse_django_field_value(ResultsModel, field, value)
         if not ok:

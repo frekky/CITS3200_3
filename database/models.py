@@ -124,7 +124,6 @@ class MyModel(models.Model):
         ('approved', 'Approved for publication'),
         ('needs_review', 'Further review requested by admin'),
     ])
-    Submission_notes = models.TextField(blank=True, help_text='Any notes relating to the submission process, from the contributor to the reviewer, and/or from the reviewing admin to the contributor.')
     Approved_time = models.DateTimeField(null=True, blank=True)
     Approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Reviewed by', related_name='+')
 
@@ -694,7 +693,7 @@ class ResultsModel(MyModel):
 
     @property
     def view_results_studies_url(self):
-        return self.get_view_results_studies_url((self.Study_id, ))
+        return reverse('admin:database_studies_change', args=[self.Study_id])
 
     @classmethod
     def get_view_results_studies_url(cls, study_id_list):
@@ -714,39 +713,36 @@ class Studies(StudiesModel):
     """ Approved Studies (for general display) """
     class Meta:
         proxy = True
-        verbose_name = 'Study with Method Details'
-        verbose_name_plural = 'Studies/Methods'
+        verbose_name = 'Study'
+        verbose_name_plural = 'Studies'
     
     objects = FilteredManager(filter_args={'Submission_status__exact': 'approved'})
 
 class Results(ResultsModel):
     class Meta:
         proxy = True
-        verbose_name = 'Point Estimate'
-        verbose_name_plural = 'Point Estimates'
+        verbose_name = 'Result'
+        verbose_name_plural = 'Results'
 
-    objects = FilteredManager(filter_args={'Submission_status__exact': 'approved'})
-
-class My_Submissions(StudiesModel):
-    class Meta:
-        proxy = True
-        verbose_name = 'Submitted Study with Method Details and Point Estimates'
-        verbose_name_plural = 'My Submissions'
-
-    objects = FilteredManager(filter_args={'Submission_status__in': ['pending', 'needs_review', 'approved'], 'Import_source__isnull': True})
+    objects = FilteredManager(filter_args={
+        'Study__Submission_status__exact': 'approved'
+    })
 
 class My_Drafts(StudiesModel):
     class Meta:
         proxy = True
-        verbose_name = 'Draft Study with Method Details and Point Estimates'
-        verbose_name_plural = 'My Draft Submissions'
+        verbose_name = 'Study (Draft)'
+        verbose_name_plural = 'Studies (Draft)'
 
     objects = FilteredManager(filter_args={'Submission_status__exact': 'draft'})
 
-class Pending_Submissions(StudiesModel):
-    class Meta:
-        proxy = True
-        verbose_name = 'User-Submitted Study with Method Details and Point Estimates'
-        verbose_name_plural = 'User Submissions Pending Review'
+class DataRequest(models.Model):
+    request_type = models.CharField(max_length=20, choices=(
+        ('addition', 'Add a new study'),
+        ('correction', 'Make a correction to existing data'),
+        ('other', 'Other - please provide details'),
+    ))
 
-    objects = FilteredManager(filter_args={'Submission_status__exact': 'pending'})
+    first_author = models.CharField(max_length=100, help_text='Please enter the first author of the study')
+
+    year = models.CharField(max_length=100, verbose_name='Year of study', help_text='Please enter the publication year of the study')

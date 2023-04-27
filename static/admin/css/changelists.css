@@ -144,7 +144,6 @@
 /* FILTER COLUMN */
 
 #changelist-filter {
-    overflow-x: scroll;
     background: var(--darkened-bg);
     border-left: none;
     margin: 0;
@@ -209,7 +208,7 @@
 
 #changelist-filter ul {
     margin: 5px 0;
-    padding: 0 15px 15px;
+    padding: 0 5px 5px;
 }
 
 #changelist-filter .filter {

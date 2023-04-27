@@ -153,7 +153,7 @@ class ChoicesMultipleSelectFilter(FieldListFilter):
                 continue
             yield {
                 'code': quote(lookup),
-                'display': title,
+                'display': mark_safe(title.replace('"', '""')),
             }
 
     def queryset(self, request, queryset):

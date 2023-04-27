@@ -323,6 +323,14 @@ tr:nth-child(odd) + .row-form-errors .errorlist {
     background: var(--darkened-bg);
 }
 
+#result_list > tbody > tr:nth-child(even) {
+    background: var(--darkened-bg-bg);
+}
+
+#result_list > tbody > tr {
+    border-bottom: 2px solid var(--hairline-color);
+}
+
 /* SORTABLE TABLES */
 
 thead th {

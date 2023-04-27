@@ -28,15 +28,15 @@ admin_site.unregister(Group)
 class AccountAdmin(ActionButtonsMixin, UserAdmin):
     list_display = ('email', 'first_name', 'last_name', 'date_joined', 'is_superuser', 'profession', 'institution', 'country')
     fields = ('email', 'first_name', 'last_name', 'date_joined', 'profession', 'institution', 'country', 'is_superuser', 'is_active')
-    search_fields = ['email']
     readonly_fields = ('id', 'date_joined')
     actions = [download_as_csv('Export selected accounts to CSV')]
     
+    list_filter = []
+    search_fields = []
     ordering = ['email']
     exclude = ()
     
     filter_horizontal = ()
-    list_filter = ('is_superuser', 'is_active',)
     fieldsets = ()
     add_fieldsets = (
         (
@@ -55,6 +55,15 @@ class ImportAdmin(ActionButtonsMixin, ModelAdmin):
 @admin.register(Document)
 class DocumentAdmin(ActionButtonsMixin, ModelAdmin):
     list_display = ('title', 'upload_file', 'all_users')
+
+SUBMIT_HIDE_FIELDS = [
+    'Unique_identifier',
+    'Submission_status',
+    'Created_by',
+    'Approved_time',
+    'Approved_by',
+    'Import_source',
+]
 
 # override default behaviour to allow viewing by anyone
 class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
@@ -137,19 +146,19 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
         })
 
 class ResultsAdminMixin:
-    @admin.display(ordering='Study__Paper_title', description='Study details')
+    @admin.display(description='Study details')
     def get_study_info_html(self, obj):
         return render_to_string('database/data/result_study_info.html', context={'row': obj})
 
-    @admin.display(ordering='Study__Study_group', description='Method details')
+    @admin.display(description='Method details')
     def get_method_info_html(self, obj):
         return render_to_string('database/data/result_method_info.html', context={'row': obj})
 
-    @admin.display(description='Population', ordering='Population_indigenous')
+    @admin.display(description='Population')
     def get_population_html(self, obj):
         return render_to_string('database/data/result_population_info.html', context={'row': obj})
 
-    @admin.display(description='Geographic Info', ordering='Specific_location')
+    @admin.display(description='Geographic Info')
     def get_location_html(self, obj):
         return render_to_string('database/data/result_location_info.html', context={'row': obj})
 
@@ -167,18 +176,18 @@ class ResultsAdminMixin:
         for result in queryset:
             study_ids.add(result.Study_id)
 
-        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_id_list))
+        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_ids))
 
 class ReadonlyResultsInline(ResultsAdminMixin, admin.TabularInline):
     model = ResultsModel
+    can_delete = False
     fields = readonly_fields = (
-        'get_study_info_html',
-        'get_method_info_html',
         'get_population_html',
         'get_location_html',
         'get_flags_html',
         'get_point_estimate_html',
     )
+    max_num = 0
 
 class BaseStudiesModelAdmin(ViewModelAdmin):
     inlines = [ReadonlyResultsInline]
@@ -209,15 +218,14 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
 
     checkbox_template = 'database/data/study_row_header.html'
 
-    ordering = ('Paper_title', 'Study_group')
+    ordering = ('Study_group', '-Paper_title')
 
-    search_fields = ('Paper_title', 'Paper_link', 'Study_description', 'Data_source_name', 'Specific_region', 'Method_limitations', 'Other_points')
+    search_fields = ('Paper_title', 'Study_description', 'Data_source_name', 'Specific_region', 'Method_limitations', 'Other_points')
+    search_help_text = 'Match keywords in any of the following fields: paper title, study description, data source name, specific location, method limitations, other points. Put quotes around search terms to find exact phrases only.'
 
     actions = ['view_child_results', 'export_csv', 'export_backup_csv', 'delete_selected']
 
-    search_help_text = 'Search titles, study descriptions, data source names, location, or Other Points for matching keywords. Put quotes around search terms to find exact phrases only.'
-
-    @admin.display(ordering='Paper_title', description='Study Details')
+    @admin.display(description='Study Details')
     def get_publication_html(self, obj):
         return render_to_string('database/data/study_publication_info.html', context={'row': obj})
 
@@ -225,7 +233,7 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
     def get_location_html(self, obj):
         return render_to_string('database/data/study_geography_info.html', context={'row': obj})
 
-    @admin.display(description='Method Details', ordering='Diagnosis_method')
+    @admin.display(description='Method Details')
     def get_method_html(self, obj):
         return render_to_string('database/data/study_method_info.html', context={'row': obj})
 
@@ -239,7 +247,15 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
         for obj in queryset:
             study_ids.add(obj.pk)
 
-        return HttpResponseRedirect(self.model.get_view_study_results_url(study_id_list))
+        return HttpResponseRedirect(self.model.get_view_study_results_url(study_ids))
+
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        if not request.user.is_superuser:
+            for x in SUBMIT_HIDE_FIELDS:
+                if x in fields:
+                    fields.remove(x)
+        return fields
 
     @admin.action(description='Export Selected to CSV')
     def export_csv(self, request, queryset):
@@ -301,6 +317,8 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
             filename = 'StrepA-Methods-Backup'
         )
 
+    
+
 class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
@@ -343,12 +361,20 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
 
     actions = ['view_parent_studies', 'export_merged_csv', 'export_backup_csv', 'delete_selected']
 
-    ordering = ('-Study__Paper_title', )    
+    ordering = ('Study__Study_group', '-Study__Paper_title', )    
 
     search_fields = ('Study__Paper_title', 'Measure', 'Specific_location')
-    search_help_text = 'Search Study Titles, Measure, and Specific Location for matching keywords. Put quotes around search terms to find exact phrases only.'
+    search_help_text = 'Match keywords in the following fields: Paper title, Measure, Specific location. Put quotes around search terms to find exact phrases only.'
 
     checkbox_template = 'database/data/result_row_header.html'
+
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        if not request.user.is_superuser:
+            for x in SUBMIT_HIDE_FIELDS:
+                if x in fields:
+                    fields.remove(x)
+        return fields
 
     @admin.action(description='Export Selected to CSV')
     def export_merged_csv(self, request, queryset):
@@ -444,23 +470,16 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
 class AllStudiesView(BaseStudiesModelAdmin):
     all_can_view = True
     no_add = True
+    no_edit = True
 
 @admin.register(Results)
 class AllResultsView(BaseResultsModelAdmin):
     all_can_view = True
     no_add = True
 
-SUBMIT_HIDE_FIELDS = [
-    'Unique_identifier',
-    'Submission_status',
-    'Created_by',
-    'Approved_time',
-    'Approved_by',
-    'Import_source',
-]
-
 class ResultsSubmissionInline(admin.StackedInline):
     model = ResultsModel
+    extra = 1
 
     def get_fields(self, request, obj=None):
         fields = list(super().get_fields(request, obj))
@@ -470,7 +489,13 @@ class ResultsSubmissionInline(admin.StackedInline):
         fields.remove('Submission_notes')
         return fields
 
-class BaseSubmissionsModelAdmin(BaseStudiesModelAdmin):
+@admin.register(My_Drafts)
+class EditMyDrafts(BaseStudiesModelAdmin):
+    all_can_add = True
+    owner_can_view = True
+    owner_can_edit = True
+    owner_can_delete = True
+
     inlines = [ResultsSubmissionInline]
 
     list_display = (
@@ -485,76 +510,34 @@ class BaseSubmissionsModelAdmin(BaseStudiesModelAdmin):
     def get_submission_html(self, obj):
         return render_to_string('database/data/study_submission_info.html', context={'row': obj})
 
-
-
-@admin.register(My_Submissions)
-class ViewMySubmissions(BaseSubmissionsModelAdmin):
-    inlines = [ReadonlyResultsInline]
-    all_can_view = False
-    owner_can_view = True
-    no_add = True
-    no_edit = True
-    no_delete = True
-
-    #actions = [*BaseSubmissionsModelAdmin.actions, 'copy_to_draft']
-
-    @admin.action(description='Copy to new Draft')
-    def copy_to_draft(self, request, queryset):
-        """ clone results & studies objects to new draft """
-        pass
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.filter(Created_by__exact=request.user)
-
-@admin.register(My_Drafts)
-class EditMyDrafts(BaseSubmissionsModelAdmin):
-    all_can_add = True
-    owner_can_view = True
-    owner_can_edit = True
-    owner_can_delete = True
-
-    actions = [*BaseSubmissionsModelAdmin.actions, 'submit_for_review']
+    actions = [*BaseStudiesModelAdmin.actions, 'approve_study']
     
     def get_fields(self, request, obj=None):
         fields = list(super().get_fields(request, obj))
         for x in SUBMIT_HIDE_FIELDS:
             if x in fields:
                 fields.remove(x)
+        fields.remove('Submission_notes')
         return fields
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(Created_by__exact=request.user)
+        # don't filter by user
+        return qs
+        #return qs.filter(Created_by__exact=request.user)
 
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
             obj.Created_by = request.user
             obj.Submission_status = 'draft'
         
+        if '_approve' in request.POST:
+            obj.Submission_status = 'approved'
+            obj.Approved_by = request.user
+        
         super().save_model(request, obj, form, change)
-    
-    @admin.action(description='Submit for Admin Review')
-    def submit_for_review(self, request, queryset):
-        num_rows = queryset.update(Submission_status='pending')
-        self.message_user(request, '%d studies marked for administrator review. '
-            'Please check "My Submissions" to see the review progress.' % num_rows)
-
-@admin.register(Pending_Submissions)
-class AdminViewPendingSubmissions(BaseSubmissionsModelAdmin):
-    all_can_view = False
-    owner_can_view = False
-    owner_can_edit = False
-    no_delete = True
-
-    actions = [*BaseSubmissionsModelAdmin.actions, 'approve_study', 'reject_study']
 
     @admin.action(description='Publish Selected Submissions')
     def approve_study(self, request, queryset):
         num_rows = queryset.update(Submission_status='approved', Approved_by=request.user, Approved_time=timezone.now())
         self.message_user(request, '%d studies marked as approved.' % num_rows)
-
-    @admin.action(description='Dis-approve Selected Submissions')
-    def reject_study(self, request, queryset):
-        num_rows = queryset.update(Submission_status='needs_review', Approved_by=request.user, Approved_time=timezone.now())
-        self.message_user(request, '%d studies marked as requiring further review.' % num_rows)

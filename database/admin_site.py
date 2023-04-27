@@ -21,11 +21,12 @@ class StrepAAdminSite(admin.AdminSite):
 		registered in this site.
 		"""
 		ordering = {
-			"Users": '0',
-			"Studies/Methods": '1',
-			"Point Estimates": '2',
-			"My Draft Submissions": '3',
-			"My Submissions": '4'
+			"Studies": '1',
+			"Results": '2',
+			"Studies (Draft)": '3',
+			"Users": '4',
+			"Imported Datasets": '5',
+			"User Guide Documents": '6',
 		}
 		app_dict = self._build_app_dict(request)
 		

@@ -22,12 +22,13 @@
 					Home
 				</a>
 			</li>
-			{% if request.user.is_authenticated %}
+				{% if request.user.is_authenticated %}
 				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'user_profile' %}">
 						My Profile
 					</a>
 				</li>
+				{% endif %}
 				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'admin:database_studies_changelist' %}">
 						Search Studies
@@ -38,7 +39,6 @@
 						Search Results
 					</a>
 				</li>
-			{% endif %}
 			{% if request.user.is_staff or request.user.is_superuser %}
 				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'admin:database_my_drafts_changelist' %}">
@@ -52,18 +52,36 @@
 				</li>
 				<li class="nav-item me-2">
 					<a class="nav-link" href="{% url 'admin:database_document_changelist' %}">
-						Uploads <span class="badge bg-primary">Admin</span>
+						User Guides <span class="badge bg-primary">Admin</span>
 					</a>
 				</li>
 				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_importsource_changelist' %}">
-						Data <span class="badge bg-primary">Admin</span>
+					<a class="nav-link" href="{% url 'admin:import_data' %}">
+						Import CSV <span class="badge bg-primary">Admin</span>
+					</a>
+				</li>
+				<li class="nav-item me-2">
+					<a class="nav-link" href="{% url 'admin:database_datarequest_changelist' %}">
+						Correction/Addition Requests <span class="badge bg-primary">Admin</span>
+					</a>
+				</li>
+			{% else %}
+				<li class="nav-item me-2">
+					<a class="nav-link" href="{% url 'admin:database_datarequest_add' %}">
+						Request Addition/Correction
 					</a>
 				</li>
 			{% endif %}
 		</ul>
 		<ul class="navbar-nav ms-auto">
 			{% if not request.user.is_authenticated %}
+			<li class="nav-item mx-3">
+				<a href="{% url 'signup' %}">
+					<btn class="btn btn-primary">
+						Sign up
+					</btn>
+				</a>
+			</li>
 			<li class="nav-item mx-3">
 				<a href="{% url 'login' %}">
 					<btn class="btn btn-primary">

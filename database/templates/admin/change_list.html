@@ -57,13 +57,11 @@
         {{ cl.formset.non_form_errors }}
     {% endif %}
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
-      <div class="changelist-form-container">
-        {% block search %}{% search_form cl %}{% endblock %}
-        {% block date_hierarchy %}{% if cl.date_hierarchy %}{% date_hierarchy cl %}{% endif %}{% endblock %}
-      </div>
+      {% block search %}{% search_form cl %}{% endblock %}
+      {% block date_hierarchy %}{% if cl.date_hierarchy %}{% date_hierarchy cl %}{% endif %}{% endblock %}
       {% block filters %}
       {% if cl.has_filters %}
-        <details data-filter-title="changelist-filters-{{ cl.opts.app_label }}-{{ cl.opts.verbose_name }}" id="changelist-filter-toolbar" open>
+        <details data-filter-title="changelist-filters-{{ cl.opts.app_label }}-{{ cl.opts.verbose_name }}" id="changelist-filter-toolbar">
           <summary id="changelist-filter-header">
             <h2>{% translate 'Filter' %}</h2>
             {% if cl.has_active_filters %}<h3 id="changelist-filter-clear">

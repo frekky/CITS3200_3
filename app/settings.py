@@ -114,7 +114,7 @@ LOGIN_URL = 'login'
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Australia/Perth'
-USE_I18N = True
+USE_I18N = False
 USE_TZ = True
 
 # Default primary key field type

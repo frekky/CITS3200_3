@@ -121,8 +121,8 @@ class MyModel(models.Model):
     Submission_status = models.CharField(max_length=20, choices=[
         ('draft', 'Draft'),
         ('pending', 'Pending admin review'),
-        ('approved', 'Approved for publication'),
-        ('needs_review', 'Further review requested by admin'),
+        ('needs_review', 'Needs further review'),
+        ('approved', 'Approved'),
     ])
     Approved_time = models.DateTimeField(null=True, blank=True)
     Approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Reviewed by', related_name='+')
@@ -737,12 +737,24 @@ class My_Drafts(StudiesModel):
     objects = FilteredManager(filter_args={'Submission_status__exact': 'draft'})
 
 class DataRequest(models.Model):
-    request_type = models.CharField(max_length=20, choices=(
+    class Meta:
+        verbose_name = 'Request for addition/correction'
+        verbose_name_plural = 'Requests for addition/correction'
+    Request_type = models.CharField(max_length=20, choices=(
         ('addition', 'Add a new study'),
         ('correction', 'Make a correction to existing data'),
         ('other', 'Other - please provide details'),
     ))
 
-    first_author = models.CharField(max_length=100, help_text='Please enter the first author of the study')
+    First_author = models.CharField(max_length=100, help_text='Please enter the first author of the study')
+    Year = models.CharField(max_length=100, verbose_name='Year of study', help_text='Please enter the publication year of the study')
+    Journal_link = models.CharField(max_length=300, verbose_name='Link to journal article')
+    Details = models.TextField(help_text="Please describe your request", blank=True)
 
-    year = models.CharField(max_length=100, verbose_name='Year of study', help_text='Please enter the publication year of the study')
+    Created_by = models.ForeignKey(Users, on_delete=models.CASCADE)
+    Created_time = models.DateTimeField(auto_now_add=True)
+    Updated_time = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return 'Request for %s by %s on %s' % (
+            self.Request_type, str(self.Created_by), self.Created_time.strftime('%d/%m/%Y'))

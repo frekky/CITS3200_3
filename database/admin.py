@@ -119,6 +119,7 @@ class ViewModelAdmin(ActionButtonsMixin, ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
+
         # Store request hack: from https://stackoverflow.com/questions/727928/django-admin-how-to-access-the-request-object-in-admin-py-for-list-display-met
         self.request = request
         return qs
@@ -189,6 +190,9 @@ class ReadonlyResultsInline(ResultsAdminMixin, admin.TabularInline):
     )
     max_num = 0
 
+    def has_view_permission(self, request, obj=None):
+        return True
+
 class BaseStudiesModelAdmin(ViewModelAdmin):
     inlines = [ReadonlyResultsInline]
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
@@ -220,8 +224,25 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
 
     ordering = ('Study_group', '-Paper_title')
 
-    search_fields = ('Paper_title', 'Study_description', 'Data_source_name', 'Specific_region', 'Method_limitations', 'Other_points')
-    search_help_text = 'Match keywords in any of the following fields: paper title, study description, data source name, specific location, method limitations, other points. Put quotes around search terms to find exact phrases only.'
+    search_fields = (
+        'Study_group',
+        'Paper_title',
+        'Year',
+        'Study_description',
+        'Disease',
+        'Study_design',
+        'Diagnosis_method',
+        'Data_source',
+        'Data_source_name',
+        'Surveillance_setting',
+        'Clinical_definition_category',
+        'Coverage',
+        'Climate',
+        'Aria_remote',
+        'Limitations_identified',
+        'Other_points',
+    )
+    search_help_text = 'Search keywords in all fields. Put quotes around search terms to find exact phrases only.'
 
     actions = ['view_child_results', 'export_csv', 'export_backup_csv', 'delete_selected']
 
@@ -363,8 +384,41 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
 
     ordering = ('Study__Study_group', '-Study__Paper_title', )    
 
-    search_fields = ('Study__Paper_title', 'Measure', 'Specific_location')
-    search_help_text = 'Match keywords in the following fields: Paper title, Measure, Specific location. Put quotes around search terms to find exact phrases only.'
+    search_fields = (
+        # Study fields
+        'Study__Study_group',
+        'Study__Paper_title',
+        'Study__Year',
+        'Study__Study_description',
+        'Study__Disease',
+        'Study__Study_design',
+        'Study__Diagnosis_method',
+        'Study__Data_source',
+        'Study__Data_source_name',
+        'Study__Surveillance_setting',
+        'Study__Clinical_definition_category',
+        'Study__Coverage',
+        'Study__Climate',
+        'Study__Aria_remote',
+        'Study__Limitations_identified',
+        'Study__Other_points',
+
+        # Result fields
+        'Age_general',
+        'Age_specific',
+        'Population_gender',
+        'Indigenous_status',
+        'Indigenous_population',
+        'Country',
+        'Jurisdiction',
+        'Specific_location',
+        'Year_start',
+        'Year_stop',
+        'Observation_time_years',
+        'Point_estimate',
+        'Measure',
+    )
+    search_help_text = 'Search keywords in all fields. Put quotes around search terms to find exact phrases only.'
 
     checkbox_template = 'database/data/result_row_header.html'
 
@@ -472,6 +526,14 @@ class AllStudiesView(BaseStudiesModelAdmin):
     no_add = True
     no_edit = True
 
+    actions = [*BaseStudiesModelAdmin.actions, 'revert_to_draft']
+
+    @admin.action(description='Revert Selected to Draft for editing', permissions=['delete'])
+    def revert_to_draft(self, request, queryset):
+        num_rows = queryset.update(Submission_status='draft')
+        self.message_user(request, '%d studies reverted to draft for editing' % num_rows)
+        return HttpResponseRedirect(reverse('admin:database_my_drafts_changelist'))
+
 @admin.register(Results)
 class AllResultsView(BaseResultsModelAdmin):
     all_can_view = True
@@ -486,15 +548,12 @@ class ResultsSubmissionInline(admin.StackedInline):
         for x in SUBMIT_HIDE_FIELDS:
             if x in fields:
                 fields.remove(x)
-        fields.remove('Submission_notes')
         return fields
 
 @admin.register(My_Drafts)
 class EditMyDrafts(BaseStudiesModelAdmin):
-    all_can_add = True
-    owner_can_view = True
-    owner_can_edit = True
-    owner_can_delete = True
+    all_can_view = False
+    owner_can_view = False
 
     inlines = [ResultsSubmissionInline]
 
@@ -517,7 +576,6 @@ class EditMyDrafts(BaseStudiesModelAdmin):
         for x in SUBMIT_HIDE_FIELDS:
             if x in fields:
                 fields.remove(x)
-        fields.remove('Submission_notes')
         return fields
 
     def get_queryset(self, request):
@@ -534,6 +592,7 @@ class EditMyDrafts(BaseStudiesModelAdmin):
         if '_approve' in request.POST:
             obj.Submission_status = 'approved'
             obj.Approved_by = request.user
+            obj.Approved_time = timezone.now()
         
         super().save_model(request, obj, form, change)
 
@@ -541,3 +600,29 @@ class EditMyDrafts(BaseStudiesModelAdmin):
     def approve_study(self, request, queryset):
         num_rows = queryset.update(Submission_status='approved', Approved_by=request.user, Approved_time=timezone.now())
         self.message_user(request, '%d studies marked as approved.' % num_rows)
+
+@admin.register(DataRequest)
+class RequestAdmin(ViewModelAdmin):
+    all_can_view = False
+    all_can_add = True
+    owner_can_view = True
+    readonly_fields = ['Created_by', 'Created_time', 'Updated_time']
+
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        if not request.user.is_superuser:
+            for x in ('Request_user', 'Request_time'):
+                if x in fields:
+                    fields.remove(x)
+        return fields
+
+    def save_model(self, request, obj, form, change):
+        if obj.pk is None:
+            obj.Created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(Created_by=request.user)

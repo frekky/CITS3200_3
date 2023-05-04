@@ -33,12 +33,15 @@ Home
 				</button>
 			</a>
 			{% for doc in documents %}
+			{% if doc.all_users or user.is_superuser %}
 			<a class="document-link me-2 mb-2" href="{{ doc.upload_file.url }}" target="_blank">
 				<button type="button" class="btn btn-warning">
 					<span class="material-icons">help</span>&nbsp;
 					{{ doc.title }}
+					{% if not doc.all_users %}<span class="badge bg-primary">Admin</span>{% endif %}
 				</button>
 			</a>
+			{% endif %}
 			{% endfor %}
 		</div>
 

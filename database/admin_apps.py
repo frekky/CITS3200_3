@@ -9,4 +9,4 @@ class MyAdminConfig(SimpleAdminConfig):
 
     def ready(self):
         super().ready()
-        from .admin import AccountAdmin
+        from . import admin

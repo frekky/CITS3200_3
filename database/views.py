@@ -114,7 +114,7 @@ def loginPage(request, *args, **kwargs):
                                         
             user = authenticate(request, email=email, first_name=first_name, last_name=last_name, password=password)
             
-            if user is not None:
+            if user is not None and user.is_active:
                 login(request, user)                
                 return redirect('home')
             else:

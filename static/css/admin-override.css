@@ -257,11 +257,13 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 }
 
 #changelist-filter .multiple-select ul li.selected-item {
-    background-color: lightblue;
+    background-color: rgb(var(--bs-primary-rgb));
+    color: white;
 }
 
 #changelist-filter .multiple-select ul li.selected-item:hover {
-    background-color: rgb(207, 235, 244);
+    background-color: rgb(128, 202, 255);
+    color: black;
 }
 
 
@@ -297,4 +299,14 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
 
 .closelink, .deletelink {
     box-sizing: content-box;
+}
+
+#changelist-filter-clear a {
+    color: white;
+}
+
+#searchbar_helptext {
+    padding-bottom: 3px;
+    padding-left: 30px;
+    font-size: 90%;
 }

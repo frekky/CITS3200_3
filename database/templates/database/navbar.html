@@ -22,56 +22,61 @@
 					Home
 				</a>
 			</li>
-				{% if request.user.is_authenticated %}
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'user_profile' %}">
-						My Profile
-					</a>
-				</li>
-				{% endif %}
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_studies_changelist' %}">
-						Search Studies
-					</a>
-				</li>
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_results_changelist' %}">
-						Search Results
-					</a>
-				</li>
-			{% if request.user.is_staff or request.user.is_superuser %}
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_my_drafts_changelist' %}">
-						Drafts <span class="badge bg-primary">Admin</span>
-					</a>
-				</li>
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_users_changelist' %}">
-						Users <span class="badge bg-primary">Admin</span>
-					</a>
-				</li>
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_document_changelist' %}">
-						User Guides <span class="badge bg-primary">Admin</span>
-					</a>
-				</li>
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:import_data' %}">
-						Import CSV <span class="badge bg-primary">Admin</span>
-					</a>
-				</li>
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_datarequest_changelist' %}">
-						Correction/Addition Requests <span class="badge bg-primary">Admin</span>
-					</a>
-				</li>
-			{% else %}
-				<li class="nav-item me-2">
-					<a class="nav-link" href="{% url 'admin:database_datarequest_add' %}">
-						Request Addition/Correction
-					</a>
-				</li>
-			{% endif %}
+		{% if request.user.is_authenticated and request.user.is_active %}
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'user_profile' %}">
+					My Profile
+				</a>
+			</li>
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_studies_changelist' %}">
+					Search Studies
+				</a>
+			</li>
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_results_changelist' %}">
+					Search Results
+				</a>
+			</li>
+		{% if request.user.access_level >= '20_contributor' %}
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_my_drafts_changelist' %}">
+					Drafts <span class="badge bg-danger">Contributor</span>
+				</a>
+			</li>
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_importsource_changelist' %}">
+					Import Excel <span class="badge bg-danger">Contributor</span>
+				</a>
+			</li>
+		{% endif %}
+		{% if request.user.access_level >= request.user.ACCESS_ADMIN %}
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_datarequest_changelist' %}">
+					Correction/Addition Requests <span class="badge bg-primary">Admin</span>
+				</a>
+			</li>
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_document_changelist' %}">
+					User Guides <span class="badge bg-primary">Admin</span>
+				</a>
+			</li>
+		{% else %}
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_datarequest_add' %}">
+					Request Addition/Correction
+				</a>
+			</li>
+		{% endif %}
+		{% if request.user.access_level >= request.user.ACCESS_SUPER %}
+			<li class="nav-item me-2">
+				<a class="nav-link" href="{% url 'admin:database_users_changelist' %}">
+					Users <span class="badge bg-primary">Admin</span>
+				</a>
+			</li>
+		{% endif %}
+
+		{% endif %}
 		</ul>
 		<ul class="navbar-nav ms-auto">
 			{% if not request.user.is_authenticated %}

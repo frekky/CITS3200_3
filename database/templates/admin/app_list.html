@@ -18,11 +18,7 @@
             </th>
             {% if model.add_url %}
               <td>
-                  {% if request.user.is_superuser and model.object_name == 'ImportSource' %}
-                  <a href="{% url 'admin:import_data' %}" class="addlink">{% translate 'Import Data' %}</a>
-                  {% else %}
                   <a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>
-                  {% endif %}
               </td>
             {% else %}
             {% endif %}

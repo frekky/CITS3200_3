@@ -45,6 +45,8 @@
     {{ adminform.form.non_field_errors }}
 {% endif %}
 
+{% block before_field_sets %}{% endblock %}
+
 {% block field_sets %}
 {% for fieldset in adminform %}
   {% include "admin/includes/fieldset.html" %}
@@ -62,6 +64,7 @@
 {% block after_related_objects %}{% endblock %}
 
 {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+{% block after_submit_row %}{% endblock %}
 
 {% block admin_change_form_document_ready %}
     <script id="django-admin-form-add-constants"

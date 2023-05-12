@@ -32,11 +32,8 @@ import logging, time
 logger = logging.getLogger(__name__)
 
 def home(request):
-    docs = Document.objects.all()
-    if not request.user.is_superuser:
-        docs = docs.filter(all_users = True)
     return render(request, 'database/home.html', context={
-        'documents': docs,
+        'documents': Document.objects.all(),
     })
 
 def get_base_url(request):
@@ -53,7 +50,8 @@ def signup_create(request):
 
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_active = False
+            user.email_verified = False
+            user.access_level = Users.ACCESS_READONLY
             
             try:
                 user.save()
@@ -69,7 +67,7 @@ def signup_create(request):
                 email.send()
                 return redirect(reverse('signup_done'))
             except Exception as e:
-                logger.error('Account activation failed for new user %s: %s: %s' % (email, str(type(e)), str(e)))
+                logger.error('Account creation failed for new user %s: %s: %s' % (email, str(type(e)), str(e)))
                 if user.pk:
                     user.delete() # remove half-activated user
                 time.sleep(2)
@@ -81,7 +79,6 @@ def signup_create(request):
 def signup_done(request):
     return render(request, 'database/signup_done.html')
 
-@csrf_protect
 # Activate account after receiving email confirmation
 def activate_confirm(request, uidb64, token):
     User = get_user_model()
@@ -92,13 +89,13 @@ def activate_confirm(request, uidb64, token):
     except(TypeError, ValueError, OverflowError, User.DoesNotExist):
         user = None
     if user is not None and account_activation_token.check_token(user, token):
-        user.is_active = True
+        user.email_verified = True
         user.save()
         
-        messages.success(request, f'Thank you for your email confirmation. Now you can login your account.')
+        messages.success(request, 'Thank you for your confirming your email address. You can now log in to access the database.')
         return redirect('login')
     else:
-        messages.error(request, f'Activation link is invalid!')
+        messages.error(request, 'Activation link is invalid!')
     return redirect('home')
 
 @csrf_protect
@@ -155,26 +152,32 @@ def password_reset_request(request):
     if request.method == 'POST':
         password_form = PasswordResetForm(request.POST)
         if password_form.is_valid():
-            data = password_form.cleaned_data['email']
-            to_email = list(Users.objects.filter(email=data))
-            if len(to_email) > 0:
-                for user in to_email:
-                    reset_url = get_base_url(request) + reverse('password_reset_confirm', args=[urlsafe_base64_encode(force_bytes(user.pk)), default_token_generator.make_token(user)])
-                    message = render_to_string('database/password/password_reset_email.html', {
-                        'user': user,
-                        'reset_url': reset_url,
-                      })
-                    email = EmailMessage(subject='ASAVI Strep A Database: Password Reset', body=message, to=[user.email])
-                    email.content_subtype = "html"
-                    try:
-                        email.send()
-                    except:
-                        return HttpResponse('Invalid Header')
+            email = password_form.cleaned_data['email']
+
+            try:
+                user = Users.objects.get(email=email)
+                reset_url = get_base_url(request) + reverse(
+                    'password_reset_confirm', args=[
+                        urlsafe_base64_encode(force_bytes(user.pk)),
+                        default_token_generator.make_token(user)
+                    ])
+                message = render_to_string('database/password/password_reset_email.html', {
+                    'user': user,
+                    'reset_url': reset_url,
+                })
+                email = EmailMessage(
+                    subject='ASAVI Strep A Database: Password Reset', body=message, to=[user.email])
+                email.content_subtype = "html"
+                try:
+                    email.send()
                     return redirect('password_reset_done')
-            else:
+                except Exception as e:
+                    messages.error(request, 'Error sending password reset email. '
+                        'Please try again or contact an administrator. (%s: %s)' % (type(e), str(e)))
+                
+            except Users.DoesNotExist:
                 time.sleep(2)
                 messages.error(request, f'Error sending email or no account found with that email address.')
-                return redirect('password_reset')
     else:
         password_form = PasswordResetForm()
         

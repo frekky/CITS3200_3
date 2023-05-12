@@ -1,64 +1,15 @@
-{% extends 'admin/base_site.html' %}
-{% load i18n admin_urls static admin_modify %}
-
-{% block extrahead %}{{ block.super }}
-<script src="{% url 'admin:jsi18n' %}"></script>
-{{ media }}
-{% endblock %}
-
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static "admin/css/forms.css" %}">
-<style>
-    p {
-        text-align: left;
-    }
-</style>
-{% endblock %}
-
-{% block coltype %}colM{% endblock %}
-
-{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-form{% endblock %}
-{% if not is_popup %}
-{% block breadcrumbs %}
-<div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
-    &rsaquo; Import Data
-</div>
-{% endblock %}
-{% endif %}
-
-{% block content %}
-<form enctype="multipart/form-data" action="" method="post">
-    {% csrf_token %}
-    <div class="mx-3">
-
-    <h2 class="text-danger">Warning: Import will clear and replace ALL data in Studies / Results tables!</h2>
-    <h3 class="text-danger">Make sure to export a backup copy first!</h3>
-    {{ form.as_p }}
-    <input type="submit" value="Upload & Import" name="submit">
-    
-    {% if results is not None %}
-    <div>
-        <h3>Import successful.</h3>
-        {% for list in results %}
-        <h4>{{ list.title }}</h4>
-        <ul>
-            {% for item in list.items %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% endfor %}
-    </div>
-
-    {% else %}
+<details class="mt-2 submit-row text-start">
+    <summary class="fs-5 ps-2 p-1">Methods/Results Excel Spreadsheet Format Specification</summary>
+    <div class="px-4">
     <p>
-        <b>Please prepare CSV files for Studies and Results containing the following fields:</b>
+        <h3>Please create an Excel spreadsheet containing exactly two sheets: "Methods" and "Results", each with the columns as specified below.</h3>
     </p>
     <div class="row g-5">
         <div class="col-6 p-1">
         <table>
             <thead>
                 <tr>
-                    <th colspan="4"><h3>Studies/Methods</h3></th>
+                    <th colspan="4"><h3>Methods</h3></th>
                 </tr>
                 <tr>
                     <th>Field / Code Name</th>
@@ -108,7 +59,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <th>Results_ID</th>
+                    <th>Study_ID</th>
                     <td>N/A</td>
                     <td>Link to Studies</td>
                     <td>Unique Identifier of the original study where the results were published. Must be an exact match of some existing study Unique_identifier.</td>
@@ -138,8 +89,5 @@
         </table>
         </div>
     </div>
-    {% endif %}
     </div>
-</form>
-
-{% endblock %}
+</details>

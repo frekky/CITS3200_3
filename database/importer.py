@@ -37,7 +37,8 @@ def format_bool_charfield(value):
 def get_field_descriptions(model):
     fdesc = []
     for field in model._meta.get_fields():
-        if field.name in ('Created_time', 'Updated_time', 'Approved_time', 'Created_by', 'Approved_by', 'Submission_status'):
+        if field.name in ('Created_time', 'Updated_time', 'Approved_time', 
+            'Created_by', 'Approved_by', 'Submission_status'):
             continue
 
         if isinstance(field, fields.reverse_related.ManyToOneRel):
@@ -138,7 +139,7 @@ def import_csv_file(import_source, for_each_row):
     for csv_row in csv_reader:
         row_num += 1
         instance, msg = for_each_row(csv_row, import_source)
-        id = csv_row.get('Unique_identifier') or csv_row.get('Results_ID') or ''
+        id = csv_row.get('Unique_identifier') or csv_row.get('Results_ID') or csv_row.get('Study_ID') or ''
         if not instance:
             log += 'Row %d (%s): Error: %s\n' % (row_num, id, msg)
             okay = False
@@ -155,7 +156,7 @@ def import_csv_file(import_source, for_each_row):
 
     return okay, instances
     
-def import_csv_studies_row(row, import_source):
+def import_methods_row_dict(row, import_source):
     study = StudiesModel(
         Import_source = import_source,
         Created_by = import_source.Imported_by,
@@ -180,7 +181,7 @@ def import_csv_studies_row(row, import_source):
 
     return study, (', '.join(field_errors) if len(field_errors) > 0 else None)
 
-def import_csv_results_row(row, import_source):
+def import_results_row_dict(row, import_source):
     result = ResultsModel(
         Import_source = import_source,
         Created_by = import_source.Imported_by,
@@ -194,7 +195,8 @@ def import_csv_results_row(row, import_source):
     for field, value in row.items():
 
         # skip foreign key & auto fields
-        if field in ('Results_ID', 'Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
+        if field in ('Study_ID', 'Results_ID', 'Approved_by', 'Created_by',
+            'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
             continue
 
         if field == 'Point_estimate':
@@ -209,8 +211,8 @@ def import_csv_results_row(row, import_source):
         else:
             setattr(result, field, value)
 
-    # link to related study/methods row based on Unique_identifier = Results_ID
-    if 'Results_ID' in row and (study_id := row['Results_ID']):
+    # link to related study/methods row based on Unique_identifier = Study_ID
+    if 'Study_ID' in row and (study_id := row['Study_ID']):
         # check Unique_identifier first
         studies = list(StudiesModel.objects.filter(Unique_identifier=study_id))
         if len(studies) == 0 and study_id:
@@ -230,6 +232,6 @@ def import_csv_results_row(row, import_source):
             result.Study = studies[0]
 
     else:
-        return None, 'Results_ID is missing or blank'
+        return None, 'Study_ID is missing or blank'
 
     return result, (', '.join(field_errors) if len(field_errors) > 0 else None)

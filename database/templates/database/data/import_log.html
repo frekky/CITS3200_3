@@ -1,0 +1,14 @@
+
+<div>
+    {% if obj.Import_status %}<h3>Import successful.</h3>{% else %}<h3>Import failed or incomplete.</h3>{% endif %}
+    {% if obj.Import_log %}
+    {% for list in obj.Import_log %}
+    <h4>{{ list.title }}</h4>
+    <ul>
+        {% for item in list.items %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+    {% endfor %}
+    {% endif %}
+</div>

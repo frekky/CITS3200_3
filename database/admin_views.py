@@ -2,18 +2,12 @@ from django.db import transaction
 from django.shortcuts import render, redirect
 import io
 
+from database.models import ImportSource, StudiesModel, ResultsModel
+from database.forms import ImportDataForm
+from database.importer import import_csv_file, import_results_row_dict, import_methods_row_dict, get_field_descriptions
+from .admin_site import admin_site
 
-def superuser_required(user):
-    return user.is_superuser
-
-#@login_required(login_url='login')
-#@user_passes_test(superuser_required)
-def import_data(request):
-    from database.models import ImportSource, StudiesModel, ResultsModel
-    from database.forms import ImportDataForm
-    from database.importer import import_csv_file, import_csv_results_row, import_csv_studies_row, get_field_descriptions
-    from .admin_site import admin_site
-
+def import_data_view(request):
     form = ImportDataForm()
     res = None
 
@@ -41,13 +35,13 @@ def import_data(request):
                 ImportSource.objects.all().delete()
 
                 # create & save studies
-                studies_ok, studies = import_csv_file(study_src, import_csv_studies_row)
+                studies_ok, studies = import_csv_file(study_src, import_methods_row_dict)
                 for inst in studies:
                     inst.save()
 
                 # create & save results
                 if studies_ok:
-                    results_ok, results = import_csv_file(result_src, import_csv_results_row)
+                    results_ok, results = import_csv_file(result_src, import_results_row_dict)
                     for inst in results:
                         inst.save()
                 else:

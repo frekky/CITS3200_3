@@ -105,7 +105,7 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
         ('StrepA_attributable_fraction', DropdownFilter), # single select
     )
 
-    actions = ['view_parent_studies', 'export_merged_csv', 'export_backup_csv', 'delete_selected']
+    actions = ['view_parent_studies', 'delete_selected']
 
     ordering = ('Study__Study_group', '-Study__Paper_title', )    
 
@@ -146,89 +146,6 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
     search_help_text = 'Search keywords in all fields. Put quotes around search terms to find exact phrases only.'
 
     checkbox_template = 'database/data/result_row_header.html'
-
-    @admin.action(description='Export Selected to CSV')
-    def export_merged_csv(self, request, queryset):
-        return download_as_csv(self, request, queryset,
-            fields = [
-                # Study fields
-                'Study__Study_group',
-                'Study__Paper_title',
-                'Study__Paper_link',
-                'Study__Year',
-                'Study__Study_description',
-                'Study__Disease',
-                'Study__Study_design',
-                'Study__Diagnosis_method',
-                'Study__Data_source',
-                'Study__Data_source_name',
-                'Study__Surveillance_setting',
-                'Study__Clinical_definition_category',
-                'Study__Coverage',
-                'Study__Climate',
-                'Study__Urban_rural_coverage',
-                'Study__Limitations_identified',
-                'Study__Other_points',
-
-                # Result fields
-                'Age_general',
-                'Age_min',
-                'Age_max',
-                'Age_specific',
-                'Population_gender',
-                'Indigenous_status',
-                'Indigenous_population',
-                'Country',
-                'Jurisdiction',
-                'Specific_location',
-                'Year_start',
-                'Year_stop',
-                'Observation_time_years',
-                'Numerator',
-                'Denominator',
-                'Point_estimate',
-                'Measure',
-                'Interpolated_from_graph',
-                'Proportion',
-                'Mortality_flag',
-                'Recurrent_ARF_flag',
-                'StrepA_attributable_fraction',
-            ],
-            verbose_names = True,
-            filename = 'StrepA-Methods-Results-export-merged'
-        )
-
-    @admin.action(description='Admin: Backup Selected to Results CSV', permissions=['change'])
-    def export_backup_csv(self, request, queryset):
-        return download_as_csv(self, request, queryset,
-            fields = [
-                ('Study__get_export_id', 'Study_ID'),
-                'Age_general',
-                'Age_min',
-                'Age_max',
-                'Age_specific',
-                'Population_gender',
-                'Indigenous_status',
-                'Indigenous_population',
-                'Country',
-                'Jurisdiction',
-                'Specific_location',
-                'Year_start',
-                'Year_stop',
-                'Observation_time_years',
-                'Numerator',
-                'Denominator',
-                'Point_estimate',
-                'Measure',
-                'Interpolated_from_graph',
-                'Proportion',
-                'Mortality_flag',
-                'Recurrent_ARF_flag',
-                'StrepA_attributable_fraction',
-            ],
-            verbose_names = False,
-            filename = 'StrepA-Results-Backup',
-        )
 
 @admin.register(Results)
 class AllResultsView(BaseResultsModelAdmin):

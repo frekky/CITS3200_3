@@ -6,6 +6,7 @@ import math
 from django.db import transaction
 from django.db.models import fields
 from django.core.exceptions import FieldDoesNotExist, ValidationError
+from django.utils import timezone
 from database.models import StudiesModel, ResultsModel, Dataset
 
 import decimal
@@ -13,7 +14,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-NULL_VALUES = ('n/a', 'not applicable', 'none', 'not defined', '', 'missing')
+NULL_VALUES = ('n/a', 'not applicable', 'none', 'not defined', '', 'missing', 'nan')
 TRUE_VALUES = ('t', '1', 'yes', 'y', 'true')
 FALSE_VALUES = ('f', '0', 'no', 'n', 'false')
 
@@ -140,114 +141,6 @@ def parse_django_field_value(model, field, value):
     except FieldDoesNotExist:
         return "No such field exists", False
 
-def import_csv_file(import_source, for_each_row):
-    csv_text = import_source.Source_file.read().decode('utf-8', errors='replace')
-    csv_stream = io.StringIO(csv_text)
-    csv_reader = csv.DictReader(csv_stream)
-
-    instances = []
-    row_num = 1
-    log = ''
-    okay = True
-    for csv_row in csv_reader:
-        row_num += 1
-        instance, msg = for_each_row(csv_row, import_source)
-        id = csv_row.get('Unique_identifier') or csv_row.get('Results_ID') or csv_row.get('Study_ID') or ''
-        if not instance:
-            log += 'Row %d (%s): Error: %s\n' % (row_num, id, msg)
-            okay = False
-        elif msg:
-            log += 'Row %d (%s): Warning: %s\n' % (row_num, id, msg)
-        
-        if instance:
-            instances.append(instance)
-
-    import_source.Import_log = log
-    import_source.Import_status = okay
-    import_source.Row_count = len(instances)
-    import_source.save()
-
-    return okay, instances
-    
-def import_methods_row_dict(row, import_source):
-    study = StudiesModel(
-        Import_source = import_source,
-        Created_by = import_source.Imported_by,
-        Approved_by = import_source.Imported_by,
-        Approved_time = import_source.Import_time,
-        Submission_status = 'approved',
-    )
-
-    field_errors = []
-
-    for field, value in row.items():
-
-        # skip foreign keys & auto fields
-        if field in ('Approved_by', 'Created_by', 'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
-            continue
-        
-        value, ok = parse_django_field_value(StudiesModel, field, value)
-        if not ok:
-            field_errors.append('%s: %s' % (field, value))
-        else:
-            setattr(study, field, value)
-
-    return study, (', '.join(field_errors) if len(field_errors) > 0 else None)
-
-def import_results_row_dict(row, import_source):
-    result = ResultsModel(
-        Import_source = import_source,
-        Created_by = import_source.Imported_by,
-        Approved_by = import_source.Imported_by,
-        Approved_time = import_source.Import_time,
-        Submission_status = 'approved',
-    )
-
-    field_errors = []
-
-    for field, value in row.items():
-
-        # skip foreign key & auto fields
-        if field in ('Study_ID', 'Results_ID', 'Approved_by', 'Created_by',
-            'Import_source', 'Approved_time', 'Created_time', 'Updated_time'):
-            continue
-
-        if field == 'Point_estimate':
-            try:
-                value = "%0.2f" % float(value)
-            except ValueError:
-                pass
-        
-        value, ok = parse_django_field_value(ResultsModel, field, value)
-        if not ok:
-            field_errors.append("%s: %s" % (field, value))
-        else:
-            setattr(result, field, value)
-
-    # link to related study/methods row based on Unique_identifier = Study_ID
-    if 'Study_ID' in row and (study_id := row['Study_ID']):
-        # check Unique_identifier first
-        studies = list(StudiesModel.objects.filter(Unique_identifier=study_id))
-        if len(studies) == 0 and study_id:
-            try:
-                # nothing found: try searching by database ID instead (ie. for online-submitted studies/results)
-                studies = list(StudiesModel.objects.filter(id=study_id))
-            except:
-                pass
-
-        if len(studies) == 0:
-            field_errors.append("Study not found (%s)" % study_id)
-            result = None
-        elif len(studies) > 1:
-            field_errors.append("Multiple studies found (%s)" % study_id)
-            result = None
-        else:
-            result.Study = studies[0]
-
-    else:
-        return None, 'Study_ID is missing or blank'
-
-    return result, (', '.join(field_errors) if len(field_errors) > 0 else None)
 
 def count_distinct(items_iter):
     """
@@ -275,15 +168,55 @@ def validate_list_items(test_list, expected_items, item_name):
     extra_items = test_items - expected_items
     if extra_items:
         raise ValidationError("Extra %ss not allowed: %s" % (item_name, ', '.join(extra_items)))
-    
-def process_db_import(request, import_source, dataset):
+
+def process_db_import(request, import_source):
     """
     Translate the Import_source.Import_data JSON into actual database rows
     """
-    
-    
-    
+    try:
+        with transaction.atomic():
+            import_source.Import_time = timezone.now()
+            import_source.save()
 
+            methods_rows = {}
+            for row_id, meth_row in import_source.Import_data.items():
+                # unpack into dict ready for model instance
+                if 'results' in meth_row:
+                    results = meth_row.pop('results')
+                else:
+                    results = None
+
+                if 'warnings' in meth_row:
+                    del meth_row['warnings']
+
+                study = StudiesModel(
+                    Import_source = import_source,
+                    Created_by = request.user,
+                    Approved_by = request.user,
+                    Approved_time = import_source.Import_time,
+                    Import_row_id = meth_row.pop('Unique_identifier'),
+                    Import_row_number = int(row_id) + 2,
+                    **meth_row
+                )
+                study.save()
+                
+                if results is None:
+                    continue
+                for res_row_id, res_row in results.items():
+                    if 'warnings' in res_row:
+                        del res_row['warnings']
+                    del res_row['Study_ID']
+
+                    result = ResultsModel(
+                        Study = study,
+                        Import_row_number = int(res_row_id) + 2,
+                        **res_row
+                    )
+                    result.save()
+        return True
+    except Exception as e:
+        logger.error('%s: %s' % (type(e).__name__, str(e)))
+        return False
 
 def load_studies_from_excel(source_file):
     """
@@ -384,7 +317,6 @@ def load_studies_from_excel(source_file):
             value, ok = parse_django_field_value(ResultsModel, field, value)
             if not ok:
                 field_errors.append("%s: %s" % (field, value))
-                res_data[field] = None
             else:
                 res_data[field] = value
         if field_errors:

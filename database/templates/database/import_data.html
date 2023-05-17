@@ -36,20 +36,6 @@
     {{ form.as_p }}
     <input type="submit" value="Upload & Import" name="submit">
     
-    {% if results is not None %}
-    <div>
-        <h3>Import successful.</h3>
-        {% for list in results %}
-        <h4>{{ list.title }}</h4>
-        <ul>
-            {% for item in list.items %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% endfor %}
-    </div>
-
-    {% else %}
     <p>
         <b>Please prepare CSV files for Studies and Results containing the following fields:</b>
     </p>
@@ -138,7 +124,6 @@
         </table>
         </div>
     </div>
-    {% endif %}
     </div>
 </form>
 

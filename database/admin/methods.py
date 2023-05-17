@@ -80,7 +80,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
     )
     search_help_text = 'Search keywords in all fields. Put quotes around search terms to find exact phrases only.'
 
-    actions = ['view_child_results', 'export_csv', 'export_backup_csv', 'delete_selected']
+    actions = ['view_child_results', 'delete_selected']
 
     @admin.display(description='Study Details')
     def get_publication_html(self, obj):
@@ -114,66 +114,6 @@ class BaseStudiesModelAdmin(MyModelAdmin):
                 if x in fields:
                     fields.remove(x)
         return fields
-
-    @admin.action(description='Export Selected to CSV')
-    def export_csv(self, request, queryset):
-        return download_as_csv(self, request, queryset,
-            fields = [
-                'Study_group',
-                'Paper_title',
-                'Paper_link',
-                'Year',
-                'Study_description',
-                'Disease',
-                'Study_design',
-                'Diagnosis_method',
-                'Data_source',
-                'Data_source_name',
-                'Surveillance_setting',
-                'Clinical_definition_category',
-                'Coverage',
-                'Climate',
-                'Urban_rural_coverage',
-                'Limitations_identified',
-                'Other_points',
-                'Created_by_name',
-                'Approved_by_name',
-            ],
-            verbose_names = True,
-            filename = 'StrepA-Methods-export',
-        )
-
-    @admin.action(description='Admin: Backup Selected to Methods CSV', permissions=['change'])
-    def export_backup_csv(self, request, queryset):
-        return download_as_csv(self, request, queryset,
-            fields = [
-                ('get_export_id', 'Unique_identifier'),
-                'Study_group',
-                'Paper_title',
-                'Paper_link',
-                'Year',
-                'Study_description',
-                'Disease',
-                'Study_design',
-                'Diagnosis_method',
-                'Data_source',
-                'Data_source_name',
-                'Surveillance_setting',
-                'Clinical_definition_category',
-                'Coverage',
-                'Climate',
-                'Urban_rural_coverage',
-                'Limitations_identified',
-                'Other_points',
-                'Created_time',
-                'Created_by_name',
-                'Updated_time',
-                'Approved_time',
-                'Approved_by_name',
-            ],
-            verbose_names = False,
-            filename = 'StrepA-Methods-Backup'
-        )
     
     # save email of user that's adding studies/results
     def save_model(self, request, obj, form, change):

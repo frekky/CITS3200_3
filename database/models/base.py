@@ -7,6 +7,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.contrib.admin.utils import quote
 from django.utils import timezone
+from datetime import timedelta
 
 from .users import Users
 
@@ -48,10 +49,53 @@ class ImportSource(models.Model):
     Upload_time = models.DateTimeField(null=True, blank=True)
     Import_time = models.DateTimeField(null=True, blank=True)
     Imported_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True)
+    Deleted = models.BooleanField(blank=True, default=False)
     Import_data = models.JSONField(null=True, blank=True)
 
     def __str__(self):
+        if self.Import_time:
+            return '%s (imported at %s)' % (
+                self.Original_filename,
+                timezone.localtime(self.Import_time).strftime('%d/%m/%Y %T %Z'),
+            )
         return self.Original_filename
+
+    @property
+    def data_state(obj):
+        from database.models import ResultsModel, StudiesModel
+        if not obj.Import_time:
+            return 'failed'
+        elif obj.Deleted:
+            return 'overwritten'
+
+        modified_time_cutoff = obj.Import_time + timedelta(seconds=10)
+        studies = StudiesModel.objects.filter(
+            Import_source=obj, Approved_by__isnull=False, Updated_time__lte=modified_time_cutoff
+        ).count()
+        results = ResultsModel.objects.filter(
+            Study__Import_source=obj, Study__Approved_by__isnull=False, Study__Updated_time__lte=modified_time_cutoff
+        ).count()
+
+        try:
+            imp_studies = len(obj.Import_data)
+            imp_results = 0
+            for meth in obj.Import_data.values():
+                imp_results += len(meth['results']) if 'results' in meth else 0
+        except Exception:
+            imp_studies = 0
+            imp_results = 0
+
+        if imp_studies == studies and imp_results == results:
+            return 'consistent'
+        else:
+            return 'inconsistent'
+
+    def clear_rows(self):
+        """ deletes imported data rows from the DB """
+        from database.models import StudiesModel
+        StudiesModel.objects.filter(Import_source=self).delete()
+        self.Deleted = True
+        self.save()
 
     @property
     def owner_id(self):

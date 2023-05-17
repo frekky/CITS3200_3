@@ -27,14 +27,15 @@ logger = logging.getLogger(__name__)
 
 @admin.register(ImportSource)
 class ImportAdmin(ViewModelAdmin):
-    list_display = ('Original_filename', 'Imported_by', 'Import_time', 'import_status_short',)
+    list_display = ('Original_filename', 'Imported_by', 'Upload_time', 'Import_time', 'import_status_short',)
     add_form_template = 'database/import_data_form.html'
 
-    exclude = ('Import_data', )
+    exclude = ('Import_data', 'Deleted')
 
     readonly_fields = (
         'Source_file', 'Original_filename', 'Dataset',
         'Imported_by', 'Import_time', 'Upload_time', 'import_status_short', 'import_log_html', 
+        #'Import_data',
     )
 
     def get_urls(self):
@@ -48,62 +49,41 @@ class ImportAdmin(ViewModelAdmin):
 
     @admin.display(description='Imported data status')
     def import_status_short(self, obj):
-        if not obj.Import_time:
-            return "File uploaded but not yet imported"
-        modified_time_cutoff = obj.Import_time + timedelta(seconds=10)
-        studies = StudiesModel.objects.filter(
-            Import_source=obj, Approved_by__isnull=False, Updated_time__lte=modified_time_cutoff
-        ).count()
-        results = ResultsModel.objects.filter(
-            Study__Import_source=obj, Approved_by__isnull=False, Updated_time__lte=modified_time_cutoff
-        ).count()
-
-        try:
-            imp_studies = len(obj.Import_data)
-            imp_results = 0
-            for meth in obj.Import_data.values():
-                imp_results += len(meth['results']) if 'results' in meth else 0
-        except Exception:
-            imp_studies = 0
-            imp_results = 0
+        state = obj.data_state
+        if state == 'failed':
+            return format_html('<span class="badge bg-warning text-black">Import not successful</span>')
+        elif state == 'consistent':
+            return format_html('<span class="badge bg-primary">Data OK: Not changed since imported</span>')
+        elif state == 'inconsistent':
+            return format_html('<span class="badge bg-danger">Data Has Changed: Make a backup first!</span>')
+        elif state == 'overwritten':
+            return format_html('<span class="badge bg-success">Overwritten by another import</span>')
         
-        return format_html(
-            '<b>{}</b>: <b>{}</b> Methods rows were imported and <b>{}</b> have not been altered<br>'
-            '<b>{}</b>: <b>{}</b> Results rows were imported and <b>{}</b> have not been altered',
-            'OK' if studies == imp_studies else 'Data Changed', imp_studies, studies,
-            'OK' if results == imp_results else 'Data Changed', imp_results, results
-        )
-
     @admin.display(description='Imported data summary')
     def import_log_html(self, obj):
         try:
             methods_warnings = []
             results_warnings = []
-            for meth_row in obj.Import_data.values():
+            for meth_rowid, meth_row in obj.Import_data.items():
                 if meth_row.get('warnings'):
                     methods_warnings.append(
-                        'Row %s: %s' % (rowid, meth_row.get('warnings'))
+                        (int(meth_rowid) + 2, meth_row.get('warnings'))
                     )
                 if not 'results' in meth_row:
                     continue
+                
                 for rowid, row in meth_row['results'].items():
                     if row.get('warnings'):
                         results_warnings.append(
-                            'Row %s: %s' % (rowid, row.get('warnings'))
+                            (int(rowid) + 2, row.get('warnings'))
                         )
         except Exception as e:
             logger.error('%s: %s' % (type(e).__name__, str(e)))
             results_warnings = None
             methods_warnings = None
 
-        #logger.error('%s\n%s' % (methods_rows, results_rows))
-
         return render_to_string('database/data/import_log.html', {
             'obj': obj,
-            'methods_warnings': methods_warnings,
-            'results_warnings': results_warnings,
-            'studies_fields': StudiesModel.IMPORT_FIELDS,
-            'studies_warning_colspan': len(StudiesModel.IMPORT_FIELDS) - 1,
-            'results_fields': ResultsModel.IMPORT_FIELDS,
-            'results_warning_colspan': len(ResultsModel.IMPORT_FIELDS) - 1,
+            'methods_warnings': sorted(methods_warnings, key=lambda x: x[0]),
+            'results_warnings': sorted(results_warnings, key=lambda x: x[0]),
         })

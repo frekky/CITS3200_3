@@ -308,7 +308,9 @@ class ResultsModel(models.Model):
         return reverse('admin:database_studies_changelist') + '?pk__in=' + ','.join(quote(str(id)) for id in study_id_list)
 
     def __str__(self):
-        return '%s%s (Burden: %s)' % ('[Pending Approval] ' if self.pending else '', self.Study.Study_description if self.Study.Study_description else self.Study.Unique_identifier, self.Point_estimate)
+        return '%s (Burden: %s)' % (
+            self.Study.Study_description if self.Study.Study_description else self.Study.Paper_title,
+            self.Point_estimate)
 
     @property
     def owner_id(self):

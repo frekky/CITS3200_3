@@ -14,11 +14,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, reverse_lazy
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.views.generic.base import RedirectView
 
 urlpatterns = [
+    path('strep-a/login/', RedirectView.as_view(url=reverse_lazy('login'))),
     path('strep-a/', admin.site.urls),
     path('', include('database.urls')), #trigger urls.py in database app folder
     path('favicon.ico', RedirectView.as_view(url=staticfiles_storage.url('img/favicon/favicon.ico')))

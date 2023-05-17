@@ -1,64 +1,63 @@
 from django.db import transaction
 from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.contrib.auth.decorators import user_passes_test
+from django import forms
 import io
-
-from database.models import ImportSource, StudiesModel, ResultsModel
-from database.forms import ImportDataForm
-from database.importer import import_csv_file, import_results_row_dict, import_methods_row_dict, get_field_descriptions
+from database.models import ImportSource, StudiesModel, ResultsModel, Users
+from database.importer import (
+    load_studies_from_excel, import_results_row_dict, import_methods_row_dict, get_field_descriptions,
+)
 from .admin_site import admin_site
 
+class ImportDataForm(forms.ModelForm):
+    class Meta:
+        model = ImportSource
+        fields = ('Source_file', 'Dataset')
+        widgets = {
+            'Source_file': forms.FileInput(attrs={
+                'accept': '.xls, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel'
+            }),
+        }
+
+    def clean(self):
+        data = super().clean()
+        # validate uploaded file
+        upload_file = data['Source_file']
+        filestream = io.BytesIO(upload_file.read())
+        data['Import_data'] = load_studies_from_excel(filestream)
+        data['Original_filename'] = upload_file.name
+        return data
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        obj.Import_data = self.cleaned_data['Import_data']
+        obj.Original_filename = self.cleaned_data['Original_filename']
+        obj.Upload_time = timezone.now()
+        if commit:
+            obj.save()
+        return obj
+
+
+def can_import_data(user):
+    return user.access_level >= Users.ACCESS_CONTRIB
+
+@user_passes_test(can_import_data)
 def import_data_view(request):
-    form = ImportDataForm()
+    import_form_class = type('ImportFormForRequest', (ImportDataForm, ), {
+        'Dataset': forms.ModelChoiceField(required=True, 
+            queryset=request.user.Responsible_for_datasets.all(),
+            empty_label=None)
+    })
+    form = import_form_class()
     res = None
 
     if request.method == 'POST':
-        form = ImportDataForm(request.POST, request.FILES)
+        form = import_form_class(request.POST, request.FILES)
         if form.is_valid():
+            obj = form.save()
 
-            # import data
-            study_src = ImportSource(
-                Source_file = form.cleaned_data['studies_file'],
-                Original_filename = form.cleaned_data['studies_file'].name,
-                Import_type = 'studies',
-                Imported_by = request.user,
-            )
-
-            result_src = ImportSource(
-                Source_file = form.cleaned_data['results_file'],
-                Original_filename = form.cleaned_data['results_file'].name,
-                Import_type = 'results',
-                Imported_by = request.user,
-            )
-
-            with transaction.atomic():
-                # clear old data
-                ImportSource.objects.all().delete()
-
-                # create & save studies
-                studies_ok, studies = import_csv_file(study_src, import_methods_row_dict)
-                for inst in studies:
-                    inst.save()
-
-                # create & save results
-                if studies_ok:
-                    results_ok, results = import_csv_file(result_src, import_results_row_dict)
-                    for inst in results:
-                        inst.save()
-                else:
-                    results_ok = False
-                    result_src.Import_log += 'Studies required to import results'
-                    result_src.save()
-                
-                res = [
-                    {
-                         'title': ('Studies/methods imported successfully (%d rows)' % study_src.Row_count) if studies_ok else 'Error importing studies',
-                         'items': study_src.Import_log.strip().split('\n'),
-                    },
-                    {
-                        'title': ('Results imported successfully (%d rows)' % result_src.Row_count) if results_ok else 'Error importing results',
-                        'items': result_src.Import_log.strip().split('\n'),
-                    }
-                ]
+            return redirect('admin:database_importsource_change', obj.id)
 
     return render(request, 'database/import_data.html', context={
         'form': form,

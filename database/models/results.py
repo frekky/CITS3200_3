@@ -16,12 +16,47 @@ class ResultsModel(models.Model):
         db_table = 'database_results'
         verbose_name = 'Result'
         verbose_name_plural = 'Results'
+
+    IMPORT_FIELDS = [
+        'Study_ID',
+        'Age_general',
+        'Age_min',
+        'Age_max',
+        'Age_specific',
+        'Population_gender',
+        'Indigenous_status',
+        'Indigenous_population',
+        'Country',
+        'Jurisdiction',
+        'Specific_location',
+        'Year_start',
+        'Year_stop',
+        'Observation_time_years',
+        'Numerator',
+        'Denominator',
+        'Point_estimate',
+        'Measure',
+        'Interpolated_from_graph',
+        'Proportion',
+        'Mortality_flag',
+        'Recurrent_ARF_flag',
+        'Schoolchildren_flag',
+        'Hospitalised_flag',
+        'StrepA_attributable_fraction',
+    ]
     
     Study = models.ForeignKey(
         StudiesModel,
         on_delete = models.CASCADE,
         help_text = "Select or add the study where these results were published.",
         related_name = 'results',
+    )
+
+    Import_row_number = models.PositiveIntegerField(
+        null = True,
+        blank = True,
+        verbose_name = 'Excel row number',
+        help_text = 'Row number from spreadsheet (only if imported from Excel)',
     )
 
     AGE_CHOICES = [

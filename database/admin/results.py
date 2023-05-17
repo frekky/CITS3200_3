@@ -91,7 +91,7 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
         ('Study__Clinical_definition_category', ChoicesMultipleSelectFilter), # multiple select
         ('Study__Coverage', ChoicesMultipleSelectFilter), # multiple select
         ('Study__Climate', ChoicesMultipleSelectFilter), # multiple select
-        ('Study__Aria_remote', ChoicesMultipleSelectFilter), # multiple select
+        ('Study__Urban_rural_coverage', ChoicesMultipleSelectFilter), # multiple select
 
         # Result-specific filters
         ('Age_general', ChoicesMultipleSelectFilter), # multiple select
@@ -124,7 +124,7 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
         'Study__Clinical_definition_category',
         'Study__Coverage',
         'Study__Climate',
-        'Study__Aria_remote',
+        'Study__Urban_rural_coverage',
         'Study__Limitations_identified',
         'Study__Other_points',
 
@@ -166,7 +166,7 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
                 'Study__Clinical_definition_category',
                 'Study__Coverage',
                 'Study__Climate',
-                'Study__Aria_remote',
+                'Study__Urban_rural_coverage',
                 'Study__Limitations_identified',
                 'Study__Other_points',
 

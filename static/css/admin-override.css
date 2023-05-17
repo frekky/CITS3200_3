@@ -310,3 +310,7 @@ td[class$="_html"][class^="field-"] *, th[class$="_html"][class^="field-"] * {
     padding-left: 30px;
     font-size: 90%;
 }
+
+.data-summary .errorlist {
+    margin-left: 0;
+}

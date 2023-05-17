@@ -17,6 +17,28 @@ class StudiesModel(models.Model):
         verbose_name = 'Study'
         verbose_name_plural = 'Studies'
 
+    IMPORT_FIELDS = [
+        'Unique_identifier',
+        'Study_group',
+        'Paper_title',
+        'Paper_link',
+        'Year',
+        'Study_description',
+        'Disease',
+        'Study_design',
+        'Diagnosis_method',
+        'Data_source',
+        'Data_source_name',
+        'Surveillance_setting',
+        'Clinical_definition_category',
+        'Coverage',
+        'Climate',
+        'Urban_rural_coverage',
+        'Focus_of_study',
+        'Limitations_identified',
+        'Other_points',
+    ]
+
     Import_source = models.ForeignKey(ImportSource, on_delete=models.CASCADE,
         null=True, blank=True, related_name='studies')
     Created_time = models.DateTimeField(auto_now_add=True, verbose_name='Contribution date')
@@ -53,13 +75,20 @@ class StudiesModel(models.Model):
         else:
             return 'N/A'
 
-    Unique_identifier = models.CharField(
+    Import_row_id = models.CharField(
         max_length = 20,
         null = True,
         blank = True,
-        verbose_name = 'Unique Identifier (Internal Use Only)',
-        help_text = 'Identifier linking individual Results to each Study in the Studies/Methods data'
-    ) 
+        verbose_name = 'Unique row identifier',
+        help_text = 'Unique Study identifier for linked Results (only if imported from Excel)',
+    )
+
+    Import_row_number = models.PositiveIntegerField(
+        null = True,
+        blank = True,
+        verbose_name = 'Excel row number',
+        help_text = 'Row number from spreadsheet (only if imported from Excel)',
+    )
 
     STUDY_GROUPS = (
         (x, x) for x in (
@@ -294,7 +323,7 @@ class StudiesModel(models.Model):
             'Remote',
         )
     )
-    Aria_remote = models.CharField(
+    Urban_rural_coverage = models.CharField(
         max_length = 20,
         blank = True,
         choices = REMOTENESS_CHOICES,

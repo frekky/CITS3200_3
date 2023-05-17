@@ -71,8 +71,10 @@ class Users(AbstractBaseUser):
         Superusers can change other user levels of access including promoting other users to Superusers.</li>
         </ul>
         """)))
-    
+
     objects = CustomAccountManager()
+
+    Responsible_for_datasets = models.ManyToManyField('Dataset', related_name='datasets')
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']

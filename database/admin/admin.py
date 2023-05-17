@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.urls import path
 
 from database.actions import download_as_csv
-from database.models import Users, ImportSource, Document, DataRequest
+from database.models import Users, ImportSource, Document, DataRequest, Dataset
 
 from .base import ViewModelAdmin
 
@@ -14,7 +14,7 @@ class AccountAdmin(ActionButtonsMixin, UserAdmin):
     list_display = ('email', 'email_verified', 'first_name', 'last_name', 'date_joined', 'access_level',
         'profession', 'institution', 'country')
     fields = ('email', 'email_verified', 'first_name', 'last_name', 'date_joined', 
-        'profession', 'institution', 'country', 'access_level')
+        'profession', 'institution', 'country', 'access_level', 'Responsible_for_datasets')
     readonly_fields = ('id', 'date_joined')
     actions = [download_as_csv('Export selected accounts to CSV')]
     
@@ -71,3 +71,15 @@ class RequestAdmin(ViewModelAdmin):
         if request.user.access_level >= Users.ACCESS_ADMIN:
             return qs
         return qs.filter(Created_by=request.user)
+
+@admin.register(Dataset)
+class DatasetAdmin(ViewModelAdmin):
+    perm_view_all = Users.ACCESS_ADMIN
+    perm_view_owner = None
+
+    perm_add = Users.ACCESS_SUPER
+    perm_edit_all = Users.ACCESS_SUPER
+    perm_edit_owner = None
+
+    perm_delete_all = Users.ACCESS_SUPER
+    perm_delete_owner = None

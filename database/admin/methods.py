@@ -53,7 +53,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
         ('Clinical_definition_category', ChoicesMultipleSelectFilter),
         ('Coverage', ChoicesMultipleSelectFilter),
         ('Climate', ChoicesMultipleSelectFilter),
-        ('Aria_remote', ChoicesMultipleSelectFilter),
+        ('Urban_rural_coverage', ChoicesMultipleSelectFilter),
     )
 
     checkbox_template = 'database/data/study_row_header.html'
@@ -74,7 +74,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
         'Clinical_definition_category',
         'Coverage',
         'Climate',
-        'Aria_remote',
+        'Urban_rural_coverage',
         'Limitations_identified',
         'Other_points',
     )
@@ -133,7 +133,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
                 'Clinical_definition_category',
                 'Coverage',
                 'Climate',
-                'Aria_remote',
+                'Urban_rural_coverage',
                 'Limitations_identified',
                 'Other_points',
                 'Created_by_name',
@@ -162,7 +162,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
                 'Clinical_definition_category',
                 'Coverage',
                 'Climate',
-                'Aria_remote',
+                'Urban_rural_coverage',
                 'Limitations_identified',
                 'Other_points',
                 'Created_time',

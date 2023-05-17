@@ -24,25 +24,34 @@ class Document(models.Model):
 
     def __str__(self):
         return self.title
+    
+class Dataset(models.Model):
+    Dataset_name = models.CharField(max_length=30, unique=True)
+    Description = models.TextField(blank=True, 
+        help_text='Optional description, such as the purpose or scope of the data set')
+
+    @property
+    def owner(self):
+        return None
+
+    def __str__(self):
+        return self.Dataset_name
 
 class ImportSource(models.Model):
     class Meta:
-        verbose_name = 'Imported Datasets'
-        verbose_name_plural = 'Imported Datasets'
+        verbose_name = 'Imported Excel Files'
+        verbose_name_plural = 'Imported Excel Files'
 
+    Dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
     Source_file = models.FileField(upload_to='uploads/imports/%Y/%m/%d/')
     Original_filename = models.CharField(max_length=255, blank=True)
-    Row_count = models.PositiveIntegerField(null=True)
-    Import_time = models.DateTimeField(auto_now_add=True)
+    Upload_time = models.DateTimeField(null=True, blank=True)
+    Import_time = models.DateTimeField(null=True, blank=True)
     Imported_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True)
-    Import_log = models.JSONField(blank=True, default=dict)
-    Import_status = models.BooleanField(null=True, blank=True)
+    Import_data = models.JSONField(null=True, blank=True)
 
     def __str__(self):
-        return '"%s" imported by %s on %s' % (
-            self.Original_filename, self.Imported_by, 
-            timezone.localtime(self.Import_time).strftime('%d/%m/%Y at %T (%Z)')
-        )
+        return self.Original_filename
 
     @property
     def owner_id(self):

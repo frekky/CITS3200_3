@@ -1,14 +1,88 @@
-
-<div>
-    {% if obj.Import_status %}<h3>Import successful.</h3>{% else %}<h3>Import failed or incomplete.</h3>{% endif %}
-    {% if obj.Import_log %}
-    {% for list in obj.Import_log %}
-    <h4>{{ list.title }}</h4>
-    <ul>
-        {% for item in list.items %}
+<div class="row data-summary">
+    <div class="col-6">
+    {% if methods_warnings %}
+    <ul class="errorlist">
+        {% for item in methods_warnings %}
         <li>{{ item }}</li>
         {% endfor %}
     </ul>
-    {% endfor %}
     {% endif %}
+    {% if methods_rows %}
+    <details class="w-100 overflow-scroll">
+        <summary>Imported Methods data table</summary>
+        <table>
+            <thead>
+                <tr>
+                    <th>Row</th>
+                    {% for f in studies_fields %}
+                    <th>{{ f }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row_id, row in methods_rows.items %}
+                <tr>
+                <th{% if row.warnings %} rowspan="2"{% endif %}>{{ row_id }}</th>
+                {% for value in row.values %}
+                <td>{{ value }}</td>
+                {% endfor %}
+                </tr>
+                {% if row.warnings %}
+                <tr>
+                <td colspan="{{ studies_warning_colspan }}" class="bg-danger">
+                    {{ row.warnings }}
+                </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </details>
+    {% else %}
+    Failed to parse Methods rows
+    {% endif %}
+    </div>
+    <div class="col-6">
+    {% if results_warnings %}
+    <ul class="errorlist">
+        {% for item in results_warnings %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if results_rows %}
+    <details class="w-100 overflow-scroll">
+        <summary>Imported Results data table</summary>
+        <table>
+            <thead>
+                <tr>
+                    <th>Row</th>
+                    {% for f in results_fields %}
+                    <th>{{ f }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row_id, row in results_rows.items %}
+                <tr>
+                <th{% if row.warnings %} rowspan="2"{% endif %}>{{ row_id }}</th>
+                {% for value in row.values %}
+                <td>{{ value }}</td>
+                {% endfor %}
+                </tr>
+                {% if row.warnings %}
+                <tr>
+                <td colspan="{{ results_warning_colspan }}" class="bg-danger">
+                    {{ row.warnings }}
+                </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </details>
+    {% else %}
+    Failed to parse Results rows
+    {% endif %}
+    </div>
 </div>

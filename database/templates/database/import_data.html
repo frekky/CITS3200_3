@@ -31,100 +31,18 @@
     {% csrf_token %}
     <div class="mx-3">
 
-    <p class="text-danger">Warning: Import will clear and replace ALL data in Studies / Results tables!</p>
-    <p class="text-danger">Make sure to export a backup copy first!</p>
+    <p>
+        Import an Excel Spreadsheet directly into the database. 
+        Please download a bulk data template from the <a href="{% url 'home' %}">home page</a>.
+    </p>
+    <p class="text-danger"><b>Warning:</b> Imported data will not replace existing data automatically. You may need to check for duplicate Studies and Results.</p>
+    <p>Select any previously imported files to overwrite. Note that ALL data from the selected files will be deleted. Make sure you have a backup!</p>
     {{ form.as_p }}
     <input type="submit" value="Upload & Import" name="submit">
     
-    <p>
-        <b>Please prepare CSV files for Studies and Results containing the following fields:</b>
-    </p>
-    <div class="row g-5">
-        <div class="col-6 p-1">
-        <table>
-            <thead>
-                <tr>
-                    <th colspan="4"><h3>Studies/Methods</h3></th>
-                </tr>
-                <tr>
-                    <th>Field / Code Name</th>
-                    <th>Display Name</th>
-                    <th>Data Type</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for f in studies_fields %}
-                <tr>
-                    <th>{{ f.djfield.name }}</th>
-                    <td>{{ f.djfield.verbose_name }}</td>
-                    <td>
-                        {{ f.type }}
-                        {% if f.djfield.choices %}
-                        <br>
-                        <b>Allowed values:</b>
-                        <ul>
-                            {% for code, text in f.djfield.choices %}
-                            <li>{{ text }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <i>{{ f.djfield.help_text }}</i>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-
-        <div class="col-6 p-1">
-        <table>
-            <thead>
-                <tr>
-                    <th colspan="4"><h3>Results</h3></th>
-                </tr>
-                <tr>
-                    <th>Field / Code Name</th>
-                    <th>Display Name</th>
-                    <th>Data Type</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th>Results_ID</th>
-                    <td>N/A</td>
-                    <td>Link to Studies</td>
-                    <td>Unique Identifier of the original study where the results were published. Must be an exact match of some existing study Unique_identifier.</td>
-                </tr>
-                {% for f in results_fields %}
-                <tr>
-                    <th>{{ f.djfield.name }}</th>
-                    <td>{{ f.djfield.verbose_name }}</td>
-                    <td>
-                        {{ f.type }}
-                        {% if f.djfield.choices %}
-                        <br>
-                        <b>Allowed values:</b>
-                        <ul>
-                            {% for code, text in f.djfield.choices %}
-                            <li>{{ text }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <i>{{ f.djfield.help_text }}</i>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
     </div>
 </form>
+
+{% include 'database/import_spec.html' %}
 
 {% endblock %}

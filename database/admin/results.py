@@ -10,8 +10,8 @@ from rangefilter.filters import NumericRangeFilter
 from admin_action_buttons.admin import ActionButtonsMixin
 
 from database.models import *
+from database.exporter import download_excel_worksheet
 
-from database.actions import download_as_csv
 from django_admin_listfilter_dropdown.filters import (
     DropdownFilter, ChoiceDropdownFilter, RelatedDropdownFilter)
 from django.db import models
@@ -43,14 +43,6 @@ class ResultsAdminMixin:
     @admin.display(description='Point Estimate')
     def get_point_estimate_html(self, obj):
         return render_to_string('database/data/result_point_estimate.html', context={'row': obj})
-    
-    @admin.action(description='Goto Studies for Selection')
-    def view_parent_studies(self, request, queryset):
-        study_ids = set()
-        for result in queryset:
-            study_ids.add(result.Study_id)
-
-        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_ids))
 
 class ReadonlyResultsInline(ResultsAdminMixin, admin.TabularInline):
     model = ResultsModel
@@ -105,7 +97,7 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
         ('StrepA_attributable_fraction', DropdownFilter), # single select
     )
 
-    actions = ['view_parent_studies', 'delete_selected']
+    actions = ['export_selected', 'view_parent_studies', 'delete_selected']
 
     ordering = ('Study__Study_group', '-Study__Paper_title', )    
 
@@ -146,6 +138,22 @@ class BaseResultsModelAdmin(ResultsAdminMixin, ViewModelAdmin):
     search_help_text = 'Search keywords in all fields. Put quotes around search terms to find exact phrases only.'
 
     checkbox_template = 'database/data/result_row_header.html'
+
+    @admin.action(description='View Studies for Selection')
+    def view_parent_studies(self, request, queryset):
+        study_ids = set()
+        for result in queryset:
+            study_ids.add(result.Study_id)
+
+        return HttpResponseRedirect(self.model.get_view_results_studies_url(study_ids))
+
+    @admin.action(description='Export Selected to Excel')
+    def export_selected(self, request, queryset):
+        study_ids = set(queryset.values_list('Study_id', flat=True))
+        my_studies = StudiesModel.objects.filter(
+            pk__in=study_ids,
+        ).order_by('pk')
+        return download_excel_worksheet(my_studies, queryset.order_by('pk'))
 
 @admin.register(Results)
 class AllResultsView(BaseResultsModelAdmin):

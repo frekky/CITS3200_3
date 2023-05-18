@@ -1,4 +1,4 @@
-<details class="mt-2 submit-row text-start">
+<details open class="mt-2 submit-row text-start">
     <summary class="fs-5 ps-2 p-1">Methods/Results Excel Spreadsheet Format Specification</summary>
     <div class="px-4">
     <p>
@@ -19,6 +19,12 @@
                 </tr>
             </thead>
             <tbody>
+                <tr>
+                    <th>Unique_identifier</th>
+                    <td>N/A</td>
+                    <td>Unique Study ID</td>
+                    <td>All studies must have a unique identifier, which is used to link individual results to each study.</td>
+                </tr>
                 {% for f in studies_fields %}
                 <tr>
                     <th>{{ f.djfield.name }}</th>

@@ -3,6 +3,7 @@ from django.contrib.admin import ModelAdmin
 from django.http import HttpResponseRedirect
 from django.utils.html import format_html, mark_safe
 from django.utils.http import urlencode
+from django.utils import timezone
 from django.template.loader import render_to_string
 from django.urls import reverse
 from rangefilter.filters import NumericRangeFilter
@@ -10,10 +11,10 @@ from admin_action_buttons.admin import ActionButtonsMixin
 
 from database.models import *
 
-from database.actions import download_as_csv
 from django_admin_listfilter_dropdown.filters import (
     DropdownFilter, ChoiceDropdownFilter, RelatedDropdownFilter)
 from django.db import models
+from database.exporter import download_excel_worksheet
 
 from database.filters import TwoNumbersInRangeFilter, ChoicesMultipleSelectFilter
 
@@ -80,7 +81,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
     )
     search_help_text = 'Search keywords in all fields. Put quotes around search terms to find exact phrases only.'
 
-    actions = ['view_child_results', 'delete_selected']
+    actions = ['export_selected', 'view_child_results', 'delete_selected']
 
     @admin.display(description='Study Details')
     def get_publication_html(self, obj):
@@ -98,7 +99,7 @@ class BaseStudiesModelAdmin(MyModelAdmin):
     def get_notes_html(self, obj):
         return render_to_string('database/data/study_notes.html', context={'row': obj})
 
-    @admin.action(description='Goto Results for Selected')
+    @admin.action(description='View Results for Selected')
     def view_child_results(self, request, queryset):
         study_ids = set()
         for obj in queryset:
@@ -106,6 +107,13 @@ class BaseStudiesModelAdmin(MyModelAdmin):
 
         return HttpResponseRedirect(self.model.get_view_study_results_url(study_ids))
 
+    @admin.action(description='Export Selected to Excel')
+    def export_selected(self, request, queryset):
+        study_ids = queryset.values_list('pk', flat=True)
+        my_results = ResultsModel.objects.filter(Study_id__in=study_ids).order_by('Study_id')
+        my_studies = queryset.order_by('pk')
+        return download_excel_worksheet(my_studies, my_results)
+    
     def get_fields(self, request, obj=None):
         """ Get list of fields to view or edit in the object view/change page """
         fields = list(super().get_fields(request, obj))

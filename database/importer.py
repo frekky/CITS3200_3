@@ -41,13 +41,30 @@ def format_bool_charfield(value):
     else:
         return 'F'
 
+def get_field_type_description(field):
+    if isinstance(field, fields.CharField):
+        field_type = 'Text (up to %d characters)' % field.max_length
+    elif isinstance(field, fields.TextField):
+        field_type = 'Text'
+    elif isinstance(field, fields.DecimalField):
+        field_type = 'Decimal'
+    elif isinstance(field, (fields.PositiveSmallIntegerField, fields.PositiveIntegerField)):
+        field_type = 'Number'
+    elif isinstance(field, fields.BooleanField):
+        field_type = 'Yes/No/Unknown'
+    else:
+        field_type = 'Other'
+
+    return field_type
+
 def get_field_descriptions(model):
     fdesc = []
-    for field in model._meta.get_fields():
-        if field.name in ('Created_time', 'Updated_time', 'Approved_time', 
-            'Created_by', 'Approved_by', 'Submission_status'):
+    for field_name in model.IMPORT_FIELDS:
+        try:
+            field = model._meta.get_field(field_name)
+        except:
             continue
-
+            
         if isinstance(field, fields.reverse_related.ManyToOneRel):
             continue
         if isinstance(field, fields.related.ForeignKey):
@@ -56,22 +73,9 @@ def get_field_descriptions(model):
         if field.name == 'id':
             continue
 
-        if isinstance(field, fields.CharField):
-            field_type = 'Text (up to %d characters)' % field.max_length
-        elif isinstance(field, fields.TextField):
-            field_type = 'Text'
-        elif isinstance(field, fields.DecimalField):
-            field_type = 'Decimal'
-        elif isinstance(field, (fields.PositiveSmallIntegerField, fields.PositiveIntegerField)):
-            field_type = 'Number'
-        elif isinstance(field, fields.BooleanField):
-            field_type = 'Yes/No/Unknown'
-        else:
-            field_type = 'Other'
-
         fdesc.append({
             'djfield': field,
-            'type': field_type,
+            'type': get_field_type_description(field),
         })
     return fdesc
 

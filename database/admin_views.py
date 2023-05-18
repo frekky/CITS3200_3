@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.auth.decorators import user_passes_test
 from django import forms
+from django.contrib import messages
 import io
 from database.models import ImportSource, StudiesModel, ResultsModel, Users
 from database.importer import (
@@ -47,9 +48,9 @@ def get_import_overwrite_flag(state):
     if state is None:
         return ''
     elif state:
-        return format_html('<span class="badge bg-primary">Database matches imported file</span>')
+        return format_html('<span class="badge bg-primary">Imported data has not been changed since import</span>')
     else:
-        return format_html('<span class="badge bg-danger">Database contents differ from imported file: make a backup before overwriting!</span>')
+        return format_html('<span class="badge bg-danger">Imported data has been changed: make a backup before overwriting!</span>')
 
 @user_passes_test(can_import_data)
 def import_data_view(request):
@@ -93,6 +94,9 @@ def import_data_view(request):
                 for key, to_clear in overwrite_objs.items():
                     if form.cleaned_data[key]:
                         to_clear.clear_rows()
+                messages.success(request, 'The import was successful.')
+            else:
+                messages.error(request, 'Import was not successful, please check the Excel spreadsheet is in the correct format.')
             return redirect('admin:database_importsource_change', obj.id)
     else:
         form = import_form_class()

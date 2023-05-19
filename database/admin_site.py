@@ -23,7 +23,7 @@ class StrepAAdminSite(admin.AdminSite):
 			"Results": '2',
 			"Studies (Draft)": '3',
 			"Users": '4',
-			"Imported Datasets": '5',
+			"Imported Excel Files": '5',
 			"User Guide Documents": '6',
 		}
 		app_dict = self._build_app_dict(request)

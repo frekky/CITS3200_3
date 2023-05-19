@@ -1,12 +1,25 @@
 from django.contrib import admin
 from admin_action_buttons.admin import ActionButtonsMixin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserChangeForm
 from django.urls import path
 
 from database.actions import download_as_csv
 from database.models import Users, ImportSource, Document, DataRequest, Dataset
 
 from .base import ViewModelAdmin
+
+class MyUserChangeForm(UserChangeForm):
+    def clean(self):
+        data = super().clean()
+        perm = data['access_level']
+        datasets = data['Responsible_for_datasets']
+
+        if perm >= Users.ACCESS_CONTRIB:
+            if datasets.count() == 0:
+                self.add_error('Responsible_for_datasets', 'You must select at least one dataset for contributors or administrators')
+        return data
+
 
 # The Custom Admin user model
 @admin.register(Users)
@@ -34,6 +47,8 @@ class AccountAdmin(ActionButtonsMixin, UserAdmin):
             },
         ),
     )
+
+    form = MyUserChangeForm
 
 @admin.register(Document)
 class DocumentAdmin(ActionButtonsMixin, admin.ModelAdmin):

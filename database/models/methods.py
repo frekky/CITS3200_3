@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.contrib.admin.utils import quote
 from django.utils import timezone
 
-from .base import ImportSource, FilteredManager
+from .base import ImportSource, FilteredManager, Dataset
 from .users import Users
 
 class StudiesModel(models.Model):
@@ -41,6 +41,8 @@ class StudiesModel(models.Model):
 
     Import_source = models.ForeignKey(ImportSource, on_delete=models.CASCADE,
         null=True, blank=True, related_name='studies')
+    Dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
+
     Created_time = models.DateTimeField(auto_now_add=True, verbose_name='Contribution date')
     Created_by = models.ForeignKey(Users, on_delete=models.SET_NULL, 
         null=True, blank=True, verbose_name='Contributed by', related_name='studies')

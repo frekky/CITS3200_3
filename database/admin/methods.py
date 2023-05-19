@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.http import HttpResponseRedirect
 from django.utils.html import format_html, mark_safe
@@ -6,6 +6,7 @@ from django.utils.http import urlencode
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django import forms
 from rangefilter.filters import NumericRangeFilter
 from admin_action_buttons.admin import ActionButtonsMixin
 
@@ -30,9 +31,17 @@ SUBMIT_HIDE_FIELDS = [
     'Import_source',
 ]
 
+class StudiesForm(forms.ModelForm):
+    class Meta:
+        model = StudiesModel
+        exclude = []
+
 class BaseStudiesModelAdmin(ViewModelAdmin):
     inlines = [ReadonlyResultsInline]
-    readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
+    readonly_fields = (
+        'Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time',
+        'Import_row_id', 'Import_row_number',
+    )
     
     list_display = (
         'get_publication_html',
@@ -122,6 +131,17 @@ class BaseStudiesModelAdmin(ViewModelAdmin):
                 if x in fields:
                     fields.remove(x)
         return fields
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        datasets_qs = request.user.Responsible_for_datasets.all()
+        form_class = type('MyStudiesForm', (StudiesForm, ), {
+            'Dataset': forms.ModelChoiceField(
+                required=True, 
+                queryset=datasets_qs,
+                empty_label=None),
+        })
+        kwargs['form'] = form_class
+        return super().get_form(request, obj, change, **kwargs)
     
     # save email of user that's adding studies/results
     def save_model(self, request, obj, form, change):
@@ -147,21 +167,23 @@ class AllStudiesView(BaseStudiesModelAdmin):
 
     actions = [*BaseStudiesModelAdmin.actions, 'revert_to_draft']
 
-    @admin.action(description='Convert Selected to Draft', permissions=['delete'])
+    @admin.action(description='Revert Selected to Draft', permissions=['change', 'delete'])
     def revert_to_draft(self, request, queryset):
+        for study in queryset:
+            if not self.has_change_permission(request, study):
+                messages.warning(request, 'Not allowed to edit one or more of the selected studies. If they were imported, edit them in the spreadsheet. If not, submit a correction/addition request.')
+                return
         num_rows = queryset.update(Approved_by=None, Approved_time=None, Import_source=None)
         self.message_user(request, '%d studies reverted to draft for editing' % num_rows)
         return HttpResponseRedirect(reverse('admin:database_my_drafts_changelist'))
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.Import_source:
-            messages.error(request, 'Cannot delete Study which was imported from Excel. Please remove it in the spreadsheet and re-import, or convert to draft first.')
             return False # prevent deletion of objects which are imported from somewhere
         return super().has_delete_permission(request, obj)
 
     def has_change_permission(self, request, obj=None):
         if obj and obj.Import_source:
-            messages.error(request, 'Cannot edit Study which was imported from Excel. Please edit it in the spreadsheet and re-import, or convert to draft to make changes.')
             return False
         return super().has_change_permission(request, obj)
     

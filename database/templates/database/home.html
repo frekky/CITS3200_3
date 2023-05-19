@@ -25,34 +25,35 @@ Home
 			<h5>This live data collection summarises data from peer-reviewed scientific publications of Strep A burden of disease studies conducted since 2000.</h5>
 			<h5>Strep A burden of disease data is searchable by manuscript author, title, disease type, calendar year, population group, study setting/location and a number of other broad methodological, clinical and demographic variables.<h5>
 		</div>
-		{% if user.is_authenticated %}
 		<div class="d-flex">
+			{% if user.is_authenticated %}
 			<a class="me-2 mb-2" href="{% url 'admin:app_list' 'database' %}">
 				<button type="button" class="btn btn-primary">
 					View database
 				</button>
 			</a>
+
+			{% else %}
+			<a class="me-2 mb-2" href="{% url 'login' %}">
+				<button type="button" class="btn btn-primary">
+					Log in to view database
+				</button>
+			</a>
+			{% endif %}
 			{% for doc in documents %}
-			{% if user.access_level >= doc.minimum_access_level %}
 			<a class="document-link me-2 mb-2" href="{{ doc.upload_file.url }}" target="_blank">
 				<button type="button" class="btn btn-warning">
 					<span class="material-icons">help</span>&nbsp;
 					{{ doc.title }}
-					{% if doc.minimum_access_level >= user.ACCESS_ADMIN %}
-					<span class="badge bg-primary">Admin</span>{% endif %}
+					{% if doc.minimum_access_level >= '20_contributor' %}
+					<span class="badge bg-danger">Contributor</span>
+					{% elif doc.minimum_access_level >= '30_administrator' %}
+					<span class="badge bg-primary">Admin</span>
+					{% endif %}
 				</button>
 			</a>
-			{% endif %}
 			{% endfor %}
 		</div>
-
-		{% else %}
-		<a class="m-auto" href="{% url 'login' %}">
-			<button type="button" class="btn btn-primary">
-				Log in to view database
-			</button>
-		</a>
-		{% endif %}
 	</div>
 	<div class="home-right">
 		<img src="{% static '/img/v_asavi.png' %}">

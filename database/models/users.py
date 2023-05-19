@@ -74,7 +74,7 @@ class Users(AbstractBaseUser):
 
     objects = CustomAccountManager()
 
-    Responsible_for_datasets = models.ManyToManyField('Dataset', related_name='datasets')
+    Responsible_for_datasets = models.ManyToManyField('Dataset', related_name='datasets', blank=True)
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']

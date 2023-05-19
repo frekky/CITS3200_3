@@ -18,7 +18,7 @@ from database.exporter import download_excel_worksheet
 
 from database.filters import TwoNumbersInRangeFilter, ChoicesMultipleSelectFilter
 
-from .base import MyModelAdmin
+from .base import ViewModelAdmin
 from .results import ReadonlyResultsInline, ResultsSubmissionInline
 
 
@@ -30,7 +30,7 @@ SUBMIT_HIDE_FIELDS = [
     'Import_source',
 ]
 
-class BaseStudiesModelAdmin(MyModelAdmin):
+class BaseStudiesModelAdmin(ViewModelAdmin):
     inlines = [ReadonlyResultsInline]
     readonly_fields = ('Approved_by', 'Updated_time', 'Created_time', 'Created_by', 'Import_source', 'Approved_time')
     
@@ -155,11 +155,13 @@ class AllStudiesView(BaseStudiesModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.Import_source:
+            messages.error(request, 'Cannot delete Study which was imported from Excel. Please remove it in the spreadsheet and re-import, or convert to draft first.')
             return False # prevent deletion of objects which are imported from somewhere
         return super().has_delete_permission(request, obj)
 
     def has_change_permission(self, request, obj=None):
         if obj and obj.Import_source:
+            messages.error(request, 'Cannot edit Study which was imported from Excel. Please edit it in the spreadsheet and re-import, or convert to draft to make changes.')
             return False
         return super().has_change_permission(request, obj)
     

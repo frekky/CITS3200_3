@@ -7,6 +7,8 @@ from django.db import models
 
 logger = logging.getLogger(__name__)
 
+EXTRA_ROWS = 10
+
 def get_data_validation(djfield):
     if isinstance(djfield, models.CharField):
         if djfield.choices:
@@ -92,10 +94,10 @@ def write_worksheet(worksheet, instances, field_spec, header_format):
     for spec in field_spec:
         validation = spec[4]
         if validation:
-            worksheet.data_validation(1, col, row, col, validation)
+            worksheet.data_validation(1, col, row + EXTRA_ROWS, col, validation)
         col += 1
 
-    worksheet.autofilter(0, 0, row, len(field_spec))
+    worksheet.autofilter(0, 0, row - 1, len(field_spec) - 1)
 
 def write_excel_workbook(workbook, studies, results):
     header_format = workbook.add_format({'bold': True})
@@ -114,7 +116,7 @@ def download_excel_worksheet(studies_qs, results_qs):
         output.getvalue(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    resp['Content-Disposition'] = 'attachment; filename=ASAVI-StrepA-Studies_%s.xslx' % date.today().strftime('%d-%m-%Y')
+    resp['Content-Disposition'] = 'attachment; filename=ASAVI-StrepA-Studies_%s.xlsx' % date.today().strftime('%d-%m-%Y')
 
     return resp
     

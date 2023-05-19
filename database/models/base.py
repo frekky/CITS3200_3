@@ -19,9 +19,13 @@ class Document(models.Model):
     upload_file = models.FileField(
         upload_to = 'uploads/documents/',
     )
-    minimum_access_level = models.CharField(max_length=30, 
+    minimum_access_level = models.CharField(
+        max_length=30,
+        null=True,
+        blank=True,
         help_text="Only visible to users equal to or above the chosen access level",
-        choices=Users._meta.get_field('access_level').choices)
+        choices=Users._meta.get_field('access_level').choices
+    )
 
     def __str__(self):
         return self.title

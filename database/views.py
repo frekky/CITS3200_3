@@ -32,8 +32,12 @@ import logging, time
 logger = logging.getLogger(__name__)
 
 def home(request):
+    docs_filter = Q(minimum_access_level__isnull=True)
+    if request.user.is_authenticated:
+        docs_filter |= Q(minimum_access_level__gte=request.user.access_level)
+
     return render(request, 'database/home.html', context={
-        'documents': Document.objects.all(),
+        'documents': Document.objects.filter(docs_filter),
     })
 
 def get_base_url(request):

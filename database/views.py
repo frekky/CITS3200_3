@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 def home(request):
     docs_filter = Q(minimum_access_level__isnull=True)
     if request.user.is_authenticated:
-        docs_filter |= Q(minimum_access_level__gte=request.user.access_level)
+        docs_filter |= Q(minimum_access_level__lte=request.user.access_level)
 
     return render(request, 'database/home.html', context={
         'documents': Document.objects.filter(docs_filter),

@@ -5,7 +5,11 @@ from django.contrib.auth.forms import UserChangeForm
 from django.urls import path
 
 from database.actions import download_as_csv
-from database.models import Users, ImportSource, Document, DataRequest, Dataset
+from database.models import (
+    Users, ImportSource, Document, DataRequest, Dataset,
+    StudiesModel, ResultsModel,
+)
+from database.exporter import download_excel_worksheet
 
 from .base import ViewModelAdmin
 
@@ -17,7 +21,8 @@ class MyUserChangeForm(UserChangeForm):
 
         if perm >= Users.ACCESS_CONTRIB:
             if datasets.count() == 0:
-                self.add_error('Responsible_for_datasets', 'You must select at least one dataset for contributors or administrators')
+                self.add_error('Responsible_for_datasets', 
+                    'You must select at least one dataset for contributors or administrators')
         return data
 
 
@@ -98,3 +103,19 @@ class DatasetAdmin(ViewModelAdmin):
 
     perm_delete_all = Users.ACCESS_SUPER
     perm_delete_owner = None
+
+    actions = ['delete_selected', 'backup_studies']
+
+    @admin.action(description='Back-up Selected to Excel')
+    def backup_studies(self, request, queryset):
+        selected_ids = queryset.values_list('pk', flat=True)
+        studies = StudiesModel.objects.filter(
+            Dataset_id__in = selected_ids,
+        ).order_by('Study_group', 'pk')
+        results = ResultsModel.objects.filter(
+            Study_id__in = studies.values_list('pk', flat=True),
+        ).order_by('Study__Study_group', 'Study_id')
+        if studies.count() == 0 and results.count() == 0:
+            messages.error(request, 'No studies are associated with the selected Datasets. Perhaps they are empty?')
+            return None
+        return download_excel_worksheet(studies, results)

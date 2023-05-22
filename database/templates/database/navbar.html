@@ -65,13 +65,8 @@
 		{% endif %}
 		{% if request.user.access_level >= request.user.ACCESS_SUPER %}
 			<li class="nav-item me-2">
-				<a class="nav-link" href="{% url 'admin:database_document_changelist' %}">
-					User Guides <span class="badge bg-primary">Admin</span>
-				</a>
-			</li>
-			<li class="nav-item me-2">
-				<a class="nav-link" href="{% url 'admin:database_users_changelist' %}">
-					Users <span class="badge bg-primary">Admin</span>
+				<a class="nav-link" href="{% url 'admin:app_list' 'database' %}">
+					DB Management <span class="badge bg-primary">Superuser</span>
 				</a>
 			</li>
 		{% endif %}

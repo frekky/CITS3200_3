@@ -28,6 +28,16 @@ logger = logging.getLogger(__name__)
 
 @admin.register(ImportSource)
 class ImportAdmin(ViewModelAdmin):
+    perm_view_all = Users.ACCESS_READONLY
+    perm_view_owner = Users.ACCESS_CONTRIB
+
+    perm_add = Users.ACCESS_CONTRIB
+    perm_edit_all = None
+    perm_edit_owner = None
+
+    perm_delete_all = Users.ACCESS_SUPER
+    perm_delete_owner = Users.ACCESS_CONTRIB
+
     list_display = ('Original_filename', 'Imported_by', 'Upload_time', 'Import_time', 'import_status_short',)
     add_form_template = 'database/import_data_form.html'
 
@@ -108,10 +118,10 @@ class ImportAdmin(ViewModelAdmin):
         selected_ids = queryset.values_list('pk', flat=True)
         studies = StudiesModel.objects.filter(
             Import_source_id__in = selected_ids,
-        ).order_by('pk')
+        ).order_by('Study_group', 'pk')
         results = ResultsModel.objects.filter(
             Study_id__in = studies.values_list('pk', flat=True),
-        ).order_by('Study_id')
+        ).order_by('Study__Study_group', 'Study_id')
         if studies.count() == 0 and results.count() == 0:
             messages.error(request, 'There are no studies or results associated with the selected items. Perhaps they were deleted?')
             return None

@@ -195,6 +195,7 @@ def process_db_import(request, import_source):
 
                 study = StudiesModel(
                     Import_source = import_source,
+                    Dataset = import_source.Dataset,
                     Created_by = request.user,
                     Approved_by = request.user,
                     Approved_time = import_source.Import_time,
